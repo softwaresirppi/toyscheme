@@ -1,0 +1,16 @@
+(load CONSTANTS.TOY)
+(load ROOT.TOY)
+
+(define (fibo n)
+    (define (fibo n)
+        (if (< n 2)
+            n
+            (+ (fibo (decr n)) (fibo (decr (decr n))))))
+    (define (fibo pre current n)
+        (if (zero? n)
+            pre
+            (fibo current (+ pre current) (decr n))))
+    (fibo 0 1 n))
+
+(define (fibo-approx n)
+    (/ (repeat (lambda (x) (* x golden-ratio)) n 1) (sqrt 5)))

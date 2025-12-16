@@ -1,0 +1,29 @@
+(load MATH.TOY)
+
+(define (smallest-divisor x)
+    (define (next-odd x)
+        (if (even? x) (incr x)
+            (incr (incr x))))
+    (define (smallest-divisor x guess)
+        (if (< x (square guess))
+            x
+            (if (divides? x guess)
+                guess
+                (smallest-divisor x (next-odd guess)))))
+    (smallest-divisor x 2))
+
+(define (prime? x)
+    (= x (smallest-divisor x))
+)
+
+(define (fermat-little-theorem a p)
+    (= a (mod (^ a p) p)))
+
+(define (fermat-test n)
+    (define (fermat-test n stamina)
+        (define a (random n))
+        (if (zero? stamina) MAYBE-PRIME
+            (if (fermat-little-theorem a n)
+                (fermat-test n (decr stamina))
+                COMPOSITE)))
+    (fermat-test n 8))

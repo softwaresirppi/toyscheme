@@ -1,0 +1,145 @@
+(load LIST.TOY)
+(load GEOMETRY.TOY)
+(load CONSTANTS.TOY)
+; ==== ABSTRACTION CURTAIN ====
+; You have draw-line, open-picture and close-picture
+(define (make-frame origin horizontal vertical)
+    (cons origin (cons horizontal vertical)))
+
+(define frame-origin car)
+(define frame-horizontal cadr)
+(define frame-vertical cddr)
+
+; maps a point from unit box to the frame box.
+(define (frame-mapper frame point)
+    (add-point
+        (frame-origin frame)
+        (add-point
+            (scale-point (x-point point) (frame-horizontal frame))
+            (scale-point (y-point point) (frame-vertical frame)))))
+
+(define empty-painter (lambda (frame) nil))
+(define (line point-a point-b frame)
+    (define mapper (frame-mapper frame))
+    (define point-a-dash (mapper point-a))
+    (define point-b-dash (mapper point-b))
+    (draw-line 
+        (x-point point-a-dash) (y-point point-a-dash)
+        (x-point point-b-dash) (y-point point-b-dash)))
+
+(define (overlay painter-a painter-b frame)
+    (painter-a frame)
+    (painter-b frame))
+
+(define (transform painter new-origin new-horizontal new-vertical frame)
+    (define mapper (frame-mapper frame))
+    (painter (make-frame
+        (mapper new-origin)
+        (sub-point (mapper new-horizontal) (mapper new-origin))
+        (sub-point (mapper new-vertical) (mapper new-origin)))))
+
+(define (flip-vertical painter)
+    (transform painter (make-point 0 1) (make-point 1 1) (make-point 0 0)))
+
+(define (flip-horizontal painter)
+    (transform painter (make-point 1 0) (make-point 0 0) (make-point 1 1)))
+
+(define (rotate90 painter)
+    (transform painter (make-point 1 0) (make-point 1 1) (make-point 0 0)))
+
+(define (rotate180 painter)
+    (rotate90 (rotate90 painter)))
+
+(define (rotate270 painter)
+    (rotate90 (rotate180 painter)))
+
+(define (beside factor painter-a painter-b frame)
+    (define mapper (frame-mapper frame))
+    (define left (transform painter-a (make-point 0 0) (make-point factor 0) (make-point 0 1)))
+    (define right (transform painter-b (make-point factor 0) (make-point 1 0) (make-point factor 1)))
+    (left frame)
+    (right frame))
+
+(define (below factor painter-a painter-b frame)
+    (define mapper (frame-mapper frame))
+    (define top (transform painter-a (make-point 0 factor) (make-point 1 factor) (make-point 0 1)))
+    (define down (transform painter-b (make-point 0 0) (make-point 1 0) (make-point 0 factor)))
+    (top frame)
+    (down frame))
+
+(define (draw-picture width height painter)
+    (open-picture width height)
+    (define screen (make-frame (make-point 0 0) (make-point width 0) (make-point 0 height)))
+    (painter screen)
+    (close-picture))
+
+; ======== ABSTRACTION CURTAIN =========
+; You have draw-picture, frame, line, overlay, below, beside, rotate-*, flip-*.
+
+(define (polygon points)
+    (if (< (length points) 2)
+        empty-painter
+        (overlay
+            (line (car points) (cadr points))
+            (polygon (cdr points)))))
+
+(define kokki (polygon [(make-point 0 0) (make-point 0.5 0.25) (make-point 0.5 0.75) (make-point 1 1)]))
+(define cross
+    (overlay (line (make-point 0 0) (make-point 1 1)) (line (make-point 1 0) (make-point 0 1))))
+(define box
+    (polygon [(make-point 0 0) (make-point 1 0) (make-point 1 1) (make-point 0 1) (make-point 0 0)]))
+(define diamond
+    (polygon [(make-point 0.5 1) (make-point 1 0.5) (make-point 0.5 0) (make-point 0 0.5) (make-point 0.5 1)]))
+(define triangle
+    (polygon [(make-point 0 0) (make-point 0.5 1) (make-point 1 0) (make-point 0 0)]))
+
+(define (sierpinski n)
+    (if (zero? n)
+        empty-painter
+        (overlay
+            triangle
+            (below 0.5 
+                (beside 0.25 empty-painter (beside 0.6666666 (sierpinski (decr n)) empty-painter))
+                (beside 0.5 (sierpinski (decr n)) (sierpinski (decr n)))))))
+
+(define (golden-box n)
+    (if (zero? n)
+        empty-painter
+        (beside (- golden-ratio 1) box (rotate270 (golden-box (decr n))))))
+
+(define (right-split n painter)
+    (if (zero? n)
+        empty-painter
+        (beside 0.5 
+            painter
+            (below 0.5 (right-split (decr n) painter) (right-split (decr n) painter)))))
+
+(define (up-split n painter)
+    (if (zero? n)
+        empty-painter
+        (below 0.5 
+            (beside 0.5 (up-split (decr n) painter) (up-split (decr n) painter))
+            painter)))
+
+(define (corner-split n painter)
+    (if (zero? n)
+        empty-painter
+        (below 0.5
+            (beside 0.5 (beside 0.5 (up-split (decr n) painter) (up-split (decr n) painter)) (corner-split (decr n) painter))
+            (beside 0.5 painter (below 0.5 (right-split (decr n) painter) (right-split (decr n) painter))))))
+
+(define (square-limit n painter)
+    (below 0.5
+        (beside 0.5 (flip-horizontal (corner-split n painter)) (corner-split n painter))
+        (beside 0.5 (flip-horizontal (flip-vertical (corner-split n painter))) (flip-vertical (corner-split n painter)))))
+
+(draw-picture 512 512
+    (below 0.5 cross cross))
+
+;; (draw-picture 512 512
+;;     (golden-box 4)
+;; )
+
+; PRIMITIVES: painter, frame
+; Combinations; overlay, below, beside
+; Abstraction: define (as usual

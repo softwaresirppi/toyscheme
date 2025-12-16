@@ -1,0 +1,35 @@
+;; accurate to 9 decimal places
+(define pi 3.1415926535)
+(define golden-ratio 1.6180339887)
+(define e 2.7182818284)
+
+(define (slow-pi stamina)
+    (define denom-first (map (lambda (x) (incr (* 4 (decr x)))) (iota stamina)))
+    (define denom-second (map (lambda (x) (+ 2 x)) denom-first))
+    (* 8 (fold + 0
+        (map (lambda (x) (/ (* (car x) (cadr x)))) (zip denom-first denom-second)))))
+
+(define (fast-pi stamina)
+    (define (pi-term i)
+        (* (/ i (incr i)) (/ (incr (incr i)) (incr i))))
+    (* (product-range pi-term 2 (lambda (x) (+ x 2)) (+ 2 stamina)) 4))
+
+(define (pi-generate)
+  (bisect-solve sine 4 2))
+
+(define (golden-ratio-generate)
+  (fixed-point (lambda (x) (+ 1 (/ 1 x))) 1))
+
+(define (golden-ratio-generate)
+    (incr (cont-frac (lambda (x) 1) (lambda (x) 1) 11)))
+;; another golden-ratio (solve (lambda (x) (- (+ 1 (/ 1 x)))))
+
+(define (e-generate)
+    (define (e-denom i)
+        (if (< i 3)
+            i
+            (if (= (mod (- i 2) 3) 0)
+                (* 2 (incr (floor (/ (- i 2) 3))))
+                1)))
+    (+ 2 (cont-frac (lambda (x) 1) e-denom 32))
+)

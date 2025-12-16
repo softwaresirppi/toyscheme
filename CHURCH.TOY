@@ -1,0 +1,48 @@
+(load MATH.TOY)
+(define (first x y)  x)
+(define (second x y) y)
+
+;; data lets you know.
+;; procedure lets you know how to do.
+
+;; procedures that store and query stuff back is data.
+;; data that represents an action is a procedure.
+
+;; The question whether something is a data OR procedure doesnt make sense. everything has some juice of data and procedure.
+
+;; Even though its represented as a procedure, fundamentally it REMEMBERS two things. Because of that its more 'data' than a procedure..
+(define (mcons x y chooser)
+    (chooser x y))
+
+(define (mcar mcons)
+    (mcons first))
+
+(define (mcdr mcons)
+    (mcons second))
+
+;; Pairs of nonnegative numbers
+(define (mcons x y)
+    (* (^ 2 x) (^ 3 y)))
+;; pair = 2^first * 3^second
+(define (mcar mcons)
+    (if (not (divides? mcons 2))
+        0
+        (incr (mcar (/ mcons 2)))))
+
+(define (mcdr mcons)
+    (if (not (divides? mcons 3))
+        0
+        (incr (mcdr (/ mcons 3)))))
+
+;; zero = f x. x
+;; one = f x. f x
+;; two = f x. f f x
+
+(define (zero f x)
+    x)
+
+(define (succ number f x)
+    (f (number f x)))
+
+(define (church-add a b f x)
+    (a f (b f x)))

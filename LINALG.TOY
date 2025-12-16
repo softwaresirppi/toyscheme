@@ -1,0 +1,42 @@
+(load LIST.TOY)
+(load MATH.TOY)
+(load ROOT.TOY)
+
+(define (transpose a)
+    (if (or* (map nil? a))
+        nil
+        (cons (map car a) (transpose (map cdr a)))))
+
+(define (vector-magnitude a)
+    (sqrt (sum (map square a))))
+
+(define (vector+ a b)
+    (fold sum (zip a b)))
+
+(define (vector-negate a)
+    (map negate a))
+
+(define (vector-scalar-* a b)
+    (map (* a) b))
+
+(define (vector* a b)
+    (fold product (zip a b)))
+
+(define (vector-reciprocal a)
+    (map reciprocal a))
+
+(define (dot-product a b)
+    (sum (map product (zip a b))))
+
+(define (matrix-*-vector combos input)
+    (map (dot-product input) combos))
+
+(define (matrix-*-matrix matrix-a matrix-b)
+    (transpose (map (matrix-*-vector matrix-a) (transpose matrix-b))))
+
+;; a . b = |a| |b| cos angle
+;; cos angle = |a| |b| / a.b
+;; angle = cos inverse (|a| |b| / a.b)
+;; angle(vector)
+;; (define (vector-angle a b)
+;;     (/ (* (vector-magnitude a) (vector-magnitude b)) (dot-product a b)))

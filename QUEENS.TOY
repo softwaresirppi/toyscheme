@@ -1,0 +1,105 @@
+(load LIST.TOY)
+;; n-queens board
+;; for all left positions,
+;;     make it queen
+;;     OR
+;;     leave it blank
+
+;; (valid-queens list-of-queen-positions)
+
+
+;; (cartesian_product (iota 8) (iota 8))
+
+;; A B C
+
+;; combinations: unique and no order
+;; AB 
+;; AC 
+;; BC 
+
+;; permutations: unique and order = (map arrangements combinations)
+
+;; AB BA 
+;; AC CA 
+;; BC CB 
+
+;; {A B C} x {A B C} no unique and order = permutations
+
+;; AA
+;; AB
+;; AC
+;; BB
+;; BC
+;; CC
+
+;; To make order sensitive (map arrangements) to it.
+
+;; We need some way to find combinations with and without duplicates.
+
+;; taylor differentials = differentials . x^(whole-numbers n)/(factorial (whole-numbers n))
+
+;; SOLVE
+;; numbers and numbers[i] are in [0..7] and numbers are unique
+
+;; AB x CD 
+
+;; AC
+;; BC
+;; AD
+;; BD
+
+;; AB x D
+
+;; AD
+;; BD
+
+;; (define (n-queens n row queens)
+;;     (define new-queens (map (cons row) (iota n)))
+;;     (if (zero? row)
+;;         queens
+;;         (n-queens n (decr row) (cartesian-product cons new-queens queens))
+;;     )
+;; )
+
+;; (print (cartesian-product [PPLE] [nil]))
+
+;; (queens rows columns)
+;; (queens 1 n) = [[(1 . 1)], [(1 . 2)], ... [(1 . n)]]
+;; (queens m n) = 
+;;    filter valid-queens?
+;;    [(m,1), (m,2), ... (m,n)] x (queens (m - 1) n)
+
+
+;; x x x x
+;; x x x x
+;; x x x x
+;; x x x x
+
+;; (4, 1) (4, 2) (4, 3) (4, 4)
+;; (3, 1) (3, 2) (3, 3) (3, 4)
+;; (2, 1) (2, 2) (2, 3) (2, 4)
+;; (1, 1) (1, 2) (1, 3) (1, 4)
+
+
+(define (cartesian-cons as bs)
+  (if (nil? as)
+    nil
+    (append (map (cons (car as)) bs) (cartesian-cons (cdr as) bs))))
+
+(define queen-row car)
+(define queen-col cdr)
+(define make-queen cons)
+
+(define (queens rows columns)
+  (if (= rows 0)
+    [nil]
+    (select (lambda (queens) (not (or* (map (attacks-queen? (car queens)) (cdr queens)))))
+      (cartesian-cons (map (cons rows) (iota columns)) (queens (decr rows) columns)))))
+
+(define (attacks-queen? a b)
+  (cond
+    ((= (queen-row a) (queen-row b)) true)
+    ((= (queen-col a) (queen-col b)) true)
+    ((= (- (queen-row a) (queen-col a)) (- (queen-row b) (queen-col b))) true)
+    ((= (abs (- (queen-row a) (queen-row b))) (abs (- (queen-col a) (queen-col b)))) true)
+    (true false)))

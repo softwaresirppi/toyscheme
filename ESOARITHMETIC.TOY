@@ -1,0 +1,54 @@
+(load MATH.TOY)
+;; these only work for positive values of b
+(define (peano+ a b)
+    (if (zero? b)
+        a
+        (peano+ (incr a) (decr b))))
+
+(define (peano* a b)
+    (define (peano* a b result)
+        (if (zero? b)
+            result
+            (peano* a (decr b) (peano+ result a))))
+    (peano* a b 0))
+    
+(define (peano- a b)
+    (if (zero? b)
+        a
+        (peano- (decr a) (decr b))))
+
+
+(define (peano/ a b)
+    (define (peano/ a b result)
+        (if (<= a 0)
+            result
+            (peano/ (peano- a b) b (peano+ result 1))))
+    (peano/ a b 0))
+
+(define (mult a b)
+    (cond
+        ((= 0 b) 0)
+        ((= 1 b) a)
+        ((even? b) (double (mult a (half b))))
+        (true (+ a (mult a (decr b))))))
+
+(define (^ x y)
+    (cond ((zero? y) 1)
+          ((even? y)  (^ (square x) (half y)))
+          (true (* x (^ x (decr y)))))) 
+
+;; x + y = incr(x + (y - 1))
+;; x * y = x + x * (y - 1)
+;; x ^ y = x * x ^ (y - 1)
+;; ...
+;; (hyper 0) -> +
+;; (hyper 1) -> *
+;; (hyper 2) -> ^
+;; (hyper 3) -> tetration
+;; (hyper n x y) -> fold (hyper n - 1) repeat x y times
+
+(define (hyper n x y)
+  (cond ((= n 0) (+ y x))
+        ((and (= n 1) (= x 0)) 0)
+        ((and (= n 2) (= x 0)) 1)
+        (true (hyper (decr n) y (hyper n (decr x) y)))))

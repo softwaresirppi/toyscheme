@@ -1,0 +1,113 @@
+(load MATH.TOY)
+(load LIST.TOY)
+(load ALJABR.TOY)
+(load MAP.TOY)
+
+(define (make-interval low high)
+    (cons low high))
+
+(define (low-interval interval)
+    (car interval))
+
+(define (high-interval interval)
+    (cdr interval))
+
+;; CURTAIN
+
+(define (make-interval-by-width center width)
+    (make-interval (- center width) (+ center width)))
+
+(define (make-interval-by-percent center percent)
+    (make-interval-by-width center (* center percent)))
+
+(define (center-interval interval)
+    (average (low-interval interval) (high-interval interval)))
+
+(define (width-interval interval)
+    (half (- (high-interval interval) (low-interval interval))))
+
+(define (contains interval x)
+    (if (and (<= (low-interval interval) x) (<= x (high-interval interval)))
+        true
+        false))
+
+(define (map-interval f interval)
+    (make-interval (f (low-interval interval)) (f (high-interval interval))))
+
+(define (print-interval interval)
+    (print (center-interval interval))
+    (print (quote ±))
+    (print (width-interval interval))
+    (newline))
+
+(define (add-interval a b)
+    (make-interval (+ (low-interval a) (low-interval b)) (+ (high-interval a) (high-interval b))))
+
+(define (negate-interval interval)
+    (make-interval (negate (low-interval interval)) (negate (high-interval interval))))
+
+(define (sub-interval a b)
+    (add-interval a (negate-interval b)))
+
+(define (mult-interval a b)
+    (define h (* (low-interval a) (low-interval b)))
+    (define j (* (low-interval a) (high-interval b)))
+    (define k (* (high-interval a) (low-interval b)))
+    (define l (* (high-interval a) (high-interval b)))
+    (make-interval (min* [h j k l]) (max* [h j k l])))
+
+(define (reciprocal-interval interval)
+    (if (contains interval 0)
+        (error ZERO_INTERVAL_DIVIDED_BY_ZERO)
+        (make-interval (reciprocal (high-interval interval)) (reciprocal (low-interval interval)))))
+
+(define (div-interval a b)
+    (mult-interval a (reciprocal-interval b)))
+
+(define (par1 r1 r2)
+  (div-interval (mult-interval r1 r2)
+                (add-interval r1 r2)))
+(define (par2 r1 r2)
+  (let ((one (make-interval 1 1))) 
+    (reciprocal-interval
+                  (add-interval (reciprocal-interval r1)
+                                (reciprocal-interval r2)))))
+
+(define a (make-interval 2 3))
+(define b (make-interval 2 4))
+(print-interval (par1 a b))
+(print-interval (par2 a b)) ; WHAT
+
+;; additive inverse
+;; multiplicative identity, inverse
+
+;; x * x^-1
+;; x = 2 4
+;; x^-1 = 1/4 1/2
+;; x * x^-1 = 
+
+(define zero-interval (make-interval 0 0))
+(define one-interval (make-interval 1 1))
+;; (print (properties
+;;     (make-operation add-interval zero-interval negate-interval)
+;;     (make-operation mult-interval one-interval reciprocal-interval)
+;;     (make-interval 1 2)
+;;     (make-interval -3 -2)
+;;     (make-interval 3 4)
+;; ))
+
+;; x = 5 to 10
+;; x + x = 2 * x =  -10 to -5
+(define intervals (with A (make-interval 8 12) nil))
+(define (add-interval-variables a-name b-name)
+    (add-interval (lookup a-name intervals) (lookup a-name intervals)))
+
+(define (negate-interval-variable a-name)
+    (negate-interval (lookup a-name intervals)))
+
+(define (sub-interval-variables a-name b-name)
+    (if (= a-name b-name)
+        zero-interval
+        (add-interval-variables a-name (negate-interval-variable b-name))))
+
+(- (- A))

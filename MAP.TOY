@@ -1,0 +1,22 @@
+(load BST.TOY)
+
+(define empty-map nil)
+(define map-empty? nil?)
+
+(define (map-lookup some_key map)
+    (cdr (bst-lookup car some_key map)))
+
+(define (map-contains? some_key map)
+    (not (nil? (bst-lookup car some_key map))))
+
+(define (map-bind key value map)
+    (bst-with car (cons key value) map))
+
+(define (map-unbind key map)
+    (bst-without car key map))
+
+(define (map-car map)
+    (bst-min car map))
+
+(define (map-cdr map)
+    (bst-without car (bst-min map) map))

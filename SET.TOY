@@ -1,0 +1,58 @@
+;; union (|)
+;; intersection (&)
+;; set difference (-)
+
+;; cartesian product
+;; power set
+;; fold
+
+;; a contains? x = {x} - a is empty 
+;; xor = (a | b) - (a & b)
+;; a subset b? = (a - b) is empty
+;; a proper-subset b? = a subset b AND a != b
+;; a equals b = a subset b AND b subset a
+;; {1 2} subset of {1 2 3 4 5}
+
+(load BST.TOY)
+(load FUNCTIONS.TOY)
+
+(define empty-set nil)
+(define set-empty? nil?)
+
+(define (set-contains? x set)
+    (not (nil? (bst-lookup identity x set))))
+
+(define (set-cons x set)
+    (bst-with identity x set))
+
+(define (set-car set)
+    (bst-min set))
+
+(define (set-cdr set)
+    (bst-without identity (bst-min set) set))
+
+;; ==== ABSTRACTION CURTAIN ====
+
+(define (set-union a b)
+    (if (set-empty? b)
+        a
+        (if (set-contains? (set-car b) a)
+            (set-union a (set-cdr b))
+            (set-cons (set-car b) (set-union a (set-cdr b))))))
+
+(define (set-intersection a b)
+    (if (set-empty? b)
+        empty-set
+        (if (set-contains? (set-car b) a)
+            (set-cons (set-car b) (set-intersection a (set-cdr b)))
+            (set-intersection a (set-cdr b)))))
+
+(define (set-difference a b)
+    (if (set-empty? a)
+        empty-set
+        (if (set-contains? (set-car a) b)
+            (set-difference (set-cdr a) b)
+            (set-cons (set-car a) (set-difference (set-cdr a) b)))))
+
+(define a (set-cons 1 (set-cons 2 (set-cons 3 empty-set))))
+(define b (set-cons 4 (set-cons 2 (set-cons 3 empty-set))))

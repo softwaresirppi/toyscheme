@@ -1,0 +1,122 @@
+(load MATH.TOY)
+
+(define (bst-node value left right)
+    ; It's hi-how-are-you officer, not how-hi-are-you!
+    (define how-high-are-you (+ 1 (max (height left) (height right))))
+    [left value how-high-are-you right])
+
+(define (value node)
+    (car (cdr node)))
+
+(define (left node)
+    (car node))
+
+(define (right node)
+    (car (cdr (cdr (cdr node)))))
+
+(define (height node)
+    (if (nil? node)
+        0
+        (car (cdr (cdr node)))))
+
+; ==== ABSTRACTION CURTAIN ====
+; You are provided with tools to mess with a node. bst-node, value, left, right, height
+
+(define (left-tug node)
+    (bst-node (value (left node))
+        (left (left node))
+        (bst-node (value node)
+            (right (left node))
+            (right node))))
+
+(define (right-tug node)
+    (bst-node (value (right node))
+        (bst-node (value node)
+            (left node)
+            (left (right node)))
+        (right (right node))))
+
+(define (right-left-tug node)
+    (right-tug
+        (bst-node
+            (left node)
+            (left-tug (right node)))))
+
+(define (left-right-tug node)
+    (left-tug
+        (bst-node
+            (right-tug (left node))
+            (right node))))
+
+(define (rebalance node)
+    (define (balance-factor node)
+        (- (height (right node)) (height (left node))))
+    (cond
+        ((< (balance-factor node) -1)
+            (if (< (balance-factor (left node)) 0)
+                (left-tug node)
+                (left-right-tug node)))
+        ((< +1 (balance-factor node))
+            (if (< (balance-factor (right node)) 0)
+                (right-left-tug node)
+                (right-tug node)))
+        (true node)))
+
+(define (bst-lookup key target_key node)
+    (cond
+        ((nil? node) nil)
+        ((< target_key (key (value node))) (bst-lookup key target_key (left node)))
+        ((< (key (value node)) target_key) (bst-lookup key target_key (right node)))
+        ((= target_key (key (value node))) (value node))))
+
+(define (bst-with key x node)
+    (cond
+        ((nil? node) (bst-node x nil nil))
+        ((< (key x) (key (value node))) 
+            (rebalance (bst-node (value node)
+                (bst-with key x (left node))
+                (right node))))
+        ((< (key (value node)) (key x))
+            (rebalance (bst-node (value node)
+                (left node)
+                (bst-with key x (right node)))))
+        (true node)))
+
+(define (bst-min node)
+    (if (nil? node)
+        nil
+        (if (nil? (left node))
+            (value node)
+            (bst-min (left node)))))
+
+(define (bst-max node)
+    (if (nil? node)
+        nil
+        (if (nil? (right node))
+            (value node)
+            (bst-max (right node)))))
+
+(define (bst-without key some_key node)
+    (cond
+        ((nil? node) node)
+        ((< some_key (key (value node)))
+            (rebalance (bst-node (value node)
+                (bst-without key some_key (left node))
+                (right node))))
+        ((< (key (value node)) some_key)
+            (rebalance (bst-node (value node)
+                (left node)
+                (bst-without key some_key (right node)))))
+        ((= some_key (key (value node)))
+            (cond 
+                ((nil? (left node)) (right node))
+                ((nil? (right node)) (left node))
+                (true
+                    (rebalance (bst-node (bst-min (right node))
+                        (left node)
+                        (bst-without key (bst-min (right node)) (right node)))))))))
+
+;; ==== ABSTRACTION CURTAIN ====
+;; You are provided bst-with, bst-without, bst-lookup, bst-min, bst-max
+
+;; (define tree (bst-with 7 (bst-with 6 (bst-with 5 (bst-with 4 (bst-with 3 (bst-with 2 (bst-with 1 nil))))))))

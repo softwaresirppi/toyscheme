@@ -1,0 +1,4 @@
+[change.scm]
+ways-to-change amount coins
+[buffer.scm]
+apply-twice f

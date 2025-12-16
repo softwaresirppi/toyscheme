@@ -1,0 +1,55 @@
+(load LIST.TOY)
+(load MATH.TOY)
+
+(define (make-operation operator identity inverse)
+    (cons operator (cons identity inverse)))
+
+(define operator car)
+
+(define identity cadr)
+(define inverse cddr)
+
+(define (check-identity operation x)
+    (define f (operator operation))
+    (= (f x (identity operation)) x))
+
+(define (check-inverse operation x)
+    (define f (operator operation))
+    (= (f x ((inverse operation) x)) (identity operation)))
+
+(define (is-commutative operation x y)
+    (define f (operator operation))
+    (=
+        (f x y)
+        (f y x)))
+
+(define (is-associative operation x y z)
+    (define f (operator operation))
+    (=
+        (f (f x y) z)
+        (f x (f y z))))
+
+(define (is-distributive plus cross x y z)
+    (define add (operator plus))
+    (define mult (operator cross))
+    (= (mult x (add y z))
+        (add (mult x y) (mult x z))))
+
+(define (mono-properties operator x y z)
+    [
+        (if (check-identity operator x) IDENTITY NOT-IDENTITY)
+        (if (check-inverse operator x) INVERSE NOT-INVERSE)
+        (if (is-commutative operator x y) COMMUTATIVE NOT-COMMUTATIVE)
+        (if (is-associative operator x y z) ASSOCIATIVE NOT-ASSOCIATIVE)
+    ]
+)
+
+(define (properties plus cross x y z)
+    [
+        (cons PLUS (mono-properties plus x y z))
+        (cons CROSS (mono-properties cross x y z))
+        (if (is-distributive plus cross x y z) DISTRIBUTIVE NOT-DISTRIBUTIVE)
+    ]
+)
+
+

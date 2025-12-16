@@ -1,0 +1,27 @@
+(load NUMERIC.TOY)
+(load FUNCTIONS.TOY)
+
+
+(define (sqrt x)
+    (solve (lambda (y) (- (* y y) x)) 0))
+
+(define (sqrt x)
+    (fixed-point (average-damp (lambda (y) (/ x y))) 1))
+
+(define (sqrt x)
+    (newton-raphson (lambda (y) (- (* y y) x)) 1))
+
+(define (sqrt x)
+    (define (improve guess)
+        (/ (+ guess (/ x guess)) 2))
+    (define (sqrt-search x guess)
+        (if (= guess (improve guess))
+            guess
+            (sqrt-search x (improve guess))))
+    (sqrt-search x 1))
+
+(define (cbrt x)
+    (fixed-point (average-damp (lambda (y) (/ x (* y y)))) 1))
+
+(define (nthroot n x)
+    (fixed-point ((repeat average-damp (- n 1)) (lambda (y) (/ x (^ y (- n 1))))) 1))

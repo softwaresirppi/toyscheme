@@ -1,0 +1,7 @@
+(define (ways-to-change amount coins)
+    (cond
+        ((zero? amount) 1)
+        ((< amount 0) 0)
+        ((nil? coins) 0)
+        (true (+ (ways-to-change (- amount (car coins)) coins)
+            (ways-to-change amount (cdr coins))))))

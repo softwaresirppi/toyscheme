@@ -1,0 +1,33 @@
+(load MATH.TOY)
+(define (sine x)
+    (define epsilon 0.0001)
+    (cond 
+        ((<= (abs x) epsilon) x)
+        (true ((lambda (s) (- (* 3 s) (* (* 4 s) (* s s)))) (sine (/ (mod x (* pi 2)) 3))))))
+
+;; Complementary sine
+(define (cosine x)
+    (sine (+ x (/ pi 2))))
+
+(define (tan x)
+    (define (tan i stamina)
+        (if (zero? stamina)
+            0
+            (/ (* x x) (- i (tan (+ 2 i) (decr stamina))))))
+    (/ (tan 1 32) 2))
+
+; what if these trigonometry functions output a stream of values which are getting more and more precise?
+; you can find the fixed-point of it for desired precision.
+
+(define (sine x n)
+    (define (sine-term i)
+        (*
+            (if (odd? i) -1 +1)
+            (/
+                (^ x (double i))
+                (factorial (double i))
+            )
+        )
+    )
+    (sum-range sine-term 0 incr n)
+)

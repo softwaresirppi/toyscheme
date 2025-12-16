@@ -1,0 +1,148 @@
+; TODO: (1) is the only issue.
+
+(load LIST.TOY)
+(load FUNCTIONS.TOY)
+
+
+(define (unwrap-singleton x)
+    (define (singleton? x)
+        (and (cons? x) (nil? (cdr x))))
+    (if (singleton? x)
+        (unwrap-singleton (car x))
+        x))
+
+(define plus (quote +))
+(define times (quote *))
+(define power (quote ^))
+
+(define (algebraic? expression)
+    (cond
+        ((variable? expression) true)
+        ((constant? expression) false)
+        ((sum? expression) (or (algebraic? (augend expression)) (algebraic? (addend expression))))
+        ((product? expression) (or (algebraic? (multiplier expression)) (algebraic? (multiplicand expression))))
+        ((power? expression) (or (algebraic? (base expression)) (algebraic? (exponent expression))))
+        (true (error THERIYATHU))))
+
+(define (constant x) x)
+(define (same-constant? x y)
+    (and* [(constant? x) (constant? y) (= (constant x) (constant y))]))
+(define constant? number?)
+
+(define (variable x) x)
+(define (same-variable? x y)
+    (and* [(variable? x) (variable? y) (= x y)]))
+(define variable? symbol?)
+
+(define (make-sum a b)
+    (cond
+        ((same-constant? a 0)
+            b)
+        ((same-constant? b 0)
+            a)
+        ((and (constant? a) (constant? b))
+            (+ (constant a) (constant b)))
+        ((sum? b)
+            (append [a plus] b))
+        ((sum? a)
+            (append a [plus b]))
+        (true
+            [a plus b])))
+
+(define augend (dot unwrap-singleton (before plus)))
+(define addend (dot unwrap-singleton (after plus)))
+(define sum? (contains? plus))
+
+(define (make-product a b)
+    (cond
+        ((same-constant? a 1)
+            b)
+        ((same-constant? b 1)
+            a)
+        ((same-constant? a 0)
+            0)
+        ((same-constant? b 0)
+            0)
+        ((and (constant? a) (constant? b))
+            (* (constant a) (constant b)))
+        ((product? b)
+            (append [a times] b))
+        ((product? a)
+            (append a [times b]))
+        (true 
+            [a times b])))
+
+(define multiplier (dot unwrap-singleton (before times)))
+(define multiplicand (dot unwrap-singleton (after times)))
+(define product? (contains? times))
+
+(define (make-power x n)
+    (cond
+        ((and (same-constant? x 0) (same-constant? n 0))
+            (error THERIYATHU))
+        ((same-constant? n 0)
+            1)
+        ((same-constant? n 1)
+            x)
+        ((same-constant? x 0)
+            0)
+        ((same-constant? x 1)
+            1)
+        ((and (constant? x) (constant? n))
+            (^ (constant x) (constant n)))
+        ((power? n)
+            (append [x power] n))
+        (true [x power n])))
+
+(define base (dot unwrap-singleton (before power)))
+(define exponent (dot unwrap-singleton (after power)))
+(define power? (contains? power))
+
+;; ==== ABSTRACTION CURTAIN ====
+;; You are provided with an algebraic language with sums, products and powers.
+
+(define (simplified expression)
+    (cond
+        ((constant? expression)
+            (constant expression))
+        ((variable? expression)
+            (variable expression))
+        ((sum? expression)
+            (make-sum
+                (simplified (augend expression))
+                (simplified (addend expression))))
+        ((product? expression)
+            (make-product
+                (simplified (multiplier expression))
+                (simplified (multiplicand expression))))
+        ((power? expression)
+            (make-power
+                (simplified (base expression))
+                (simplified (exponent expression))))
+        (true (error THERIYATHU))))
+
+(define (differential expression variable)
+    (cond
+        ((constant? expression)
+            0)
+        ((variable? expression)
+            (if (same-variable? expression variable)
+                1
+                0))
+        ((sum? expression)
+            (make-sum
+                (differential (augend expression) variable)
+                (differential (addend expression) variable)))
+        ((product? expression)
+            (make-sum
+                (make-product (differential (multiplier expression) variable) (multiplicand expression))
+                (make-product (multiplier expression) (differential (multiplicand expression) variable))))
+        ((and (power? expression) (not (algebraic? (exponent expression))))
+            (make-product
+                (make-product
+                    (exponent expression)
+                    (make-power
+                        (base expression)
+                        (make-sum -1 (exponent expression))))
+                (differential (base expression) variable)))
+        (true (error THERIYATHU))))

@@ -1,0 +1,23 @@
+(define (identity x) x)
+(define (flip f x y) (f y x))
+(define (dot f g x) (f (g x)))
+(define (repeat f n) 
+    (if (zero? n)
+        identity
+        (dot f (repeat f (decr n)))))
+
+(define (fixed-point f x)
+    (let ((fx (f x)))
+        (if (= x fx)
+            x
+            (fixed-point f fx))))
+
+(define (timed f x)
+    (define start (time))
+    (define result (f x))
+    (define end (time))
+    (print (- end start))
+    (print SECONDS)
+    (newline)
+    result
+)

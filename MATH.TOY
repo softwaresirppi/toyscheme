@@ -1,0 +1,52 @@
+(load FUNCTIONS.TOY)
+(load CONSTANTS.TOY)
+
+(define negate (- 0))
+(define reciprocal (/ 1))
+
+(define (abs x)
+    ((if (< x 0) negate identity) x))
+
+(define (sign x) (if (< x 0) -1 1))
+
+(define (divides? x y)
+    (= (mod x y) 0))
+
+(define even? ((flip divides?) 2))
+
+(define odd? (dot not even?))
+
+(define (square x) (* x x))
+(define (double x) (* x 2))
+(define (half x) (/ x 2))
+
+(define (average x y) (half (+ x y)))
+
+(define (max x y) 
+    (if (< x y) y x))
+
+(define (min x y) 
+    (if (< x y) x y))
+
+(define (factorial n)
+    (define (factorial x)
+            (if (zero? x)
+                1
+                (* x (factorial (decr x)))))
+    (define (factorial n result)
+        (if (zero? n)
+            result
+            (factorial (decr n) (* n result))))
+    (factorial n 1))
+
+(define (gcd x y)
+    (if (= 0 y) x
+        (gcd y (mod x y))))
+
+(define (pascal row column)
+    (cond
+        ((< row 0) 0)
+        ((and (= row 1) (= column 1)) 1)
+        ((< column 0) 0)
+        ((< row column) 0)
+        (true (+ (pascal (decr row) column) (pascal (decr row) (decr column))))))

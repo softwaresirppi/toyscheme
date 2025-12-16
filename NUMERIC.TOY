@@ -1,0 +1,111 @@
+(load MATH.TOY)
+(load LINALG.TOY)
+(load LIST.TOY)
+
+(define (sum-range term start next end)
+    (define (sum-range term start next end result)
+        (if (< end start)
+            result
+            (sum-range term (next start) next end (+ result (term start)))))
+    (sum-range term start next end 0))
+
+(define (product-range term start next end)
+    (define (product-range term start next end result)
+        (if (< end start)
+            result
+            (product-range term (next start) next end (* result (term start)))))
+    (product-range term start next end 1))
+
+(define (differential f)
+    (define epsilon 0.001)
+    (lambda (x)
+        (/ (- (f (+ x epsilon)) (f (- x epsilon)))
+           (* 2 epsilon))))
+
+(define (integral f start end)
+    (define epsilon 0.001)
+    (sum-range
+        (lambda (i) (* epsilon (f i))) (+ start (/ epsilon 2)) 
+        (lambda (x) (+ x epsilon)) 
+        end))
+
+(define (integral f)
+    (lambda (end)
+        (define (integral f start end stamina)
+            (define n stamina)
+            (define epsilon (/ (- end start) n))
+            (define (simpson-term i)
+                (cond
+                    ((= i 0) (f start))
+                    ((= i n) (f end))
+                    ((even? i) (* 2 (f (+ start (* i epsilon)))))
+                    ((odd? i) (* 4 (f (+ start (* i epsilon)))))))
+            (* (/ epsilon 3) (sum-range simpson-term 0 incr n)))
+        (integral f 0 end 64)))
+
+(define (bisect-solve f negative-x positive-x)
+    (define middle-x (average negative-x positive-x))
+    (define middle-y (f middle-x))
+    (cond
+        ((= negative-x positive-x) middle-x)
+        ((= 0 middle-y) middle-x)
+        ((< middle-y 0) (bisect-solve f middle-x positive-x))
+        ((< 0 middle-y) (bisect-solve f negative-x middle-x))
+        (true middle-x)))
+
+(define (newton-raphson f guess)
+    (define (improve guess) (- guess (/ (f guess) ((differential f) guess))))
+    (fixed-point improve guess))
+
+(define (solve f guess)
+    (define (solve f start neg-end pos-end hop)
+        (define start-y (f start))
+        (define pos-end-y (f pos-end))
+        (define neg-end-y (f neg-end))
+        (cond
+            ((and (<= start-y 0) (<= 0 pos-end-y)) (bisect-solve f start pos-end))
+            ((and (<= 0 start-y) (<= pos-end-y 0)) (bisect-solve f pos-end start))
+            ((and (<= start-y 0) (<= 0 neg-end-y)) (bisect-solve f start neg-end))
+            ((and (<= 0 start-y) (<= neg-end-y 0)) (bisect-solve f neg-end start))
+            (true (solve f start (- neg-end hop) (+ pos-end hop) (* hop 2)))))
+    (solve f guess guess guess 1))
+
+
+;; The continous fraction is made in reverse!
+(define (cont-frac n d k)
+    (define (cont-frac i result)
+        (if (= k i)
+            result
+            (cont-frac (incr i) (/ (n (- k i)) (+ (d (- k i)) result)))))
+    (cont-frac 0 0))
+
+(define (cont-frac n d k)
+    (define (cont-frac i)
+        (if (< k i)
+            0
+            (/ (n i) (+ (d i) (cont-frac (incr i))))))
+    (cont-frac 1))
+
+(define (average-damp f)
+    (lambda (x) (average x (f x))))
+
+(define (smoothed f strength)
+    (lambda (x)
+        (average [(f (- x strength)) (f x) (f (+ x strength))])))
+
+;; WHATTT. SO i have to PASS in the function f which i which to compute???
+;; (define (taylor f a n x)
+;;     (define (taylor-term i)
+;;         (/  (* ((repeat differential i) f)
+;;                 (^ (- x a) i))
+;;             (factorial i)
+;;         )
+;;     )
+;;     (summation taylor-term 0 incr n)
+;; )
+
+;[f(0), f'(0), f''(0)... ]
+; taylor(diffs-at-zero) = diffs-at-zero . x^W/W!
+
+(define (taylor diffs-at-zero n x)
+    (dot-product diffs-at-zero (map (lambda (w) (/ (^ x w) (factorial w))) (whole-numbers n))))

@@ -1,0 +1,16 @@
+;; grow(rate, x) = x * (1 + rate)
+;; simple_growth(principal) = growth(years * year_rate, principal)
+;; compound_growth(principal) = grow(year_rate/n)^(n * years)(principal)
+
+(load FUNCTIONS.TOY)
+
+(define (growth rate principal)
+    (* principal (+ 1 rate)))
+
+(define (simple-growth years year_rate)
+    (growth (* years year_rate)))
+
+(define (compound-growth years year_rate n)
+    (define periods (* n years))
+    (define period_rate (/ year_rate n))
+    (repeat (growth period_rate) periods))

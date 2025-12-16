@@ -1,0 +1,297 @@
+
+
+(define epsilon 1/100)
+
+
+
+(define (apply n f x)
+    (if (zero? n)
+        x
+        (apply (decr n) f (f x))))
+
+;; (print (* golden-ratio golden-ratio)) (newline)
+;; (print (+ golden-ratio 1)) (newline)
+
+
+
+
+
+
+(define (mult x y)
+    (cond
+        ((= 0 y) 0)
+        ((= 1 y) x)
+        ((even? y) (twice (mult x (half y))))
+        (true (+ x (mult x (decr y))))))
+
+(define (gcd x y)
+    (if (= 0 y) x
+        (gcd y (mod x y))))
+
+
+(define (divides? x y)
+    (= (mod x y) 0))
+
+(define (smallest-divisor x)
+    (define (next-odd x)
+        (if (even? x) (incr x)
+            (incr (incr x))
+        )
+    )
+    (define (smallest-divisor x guess)
+        (if (< x (square guess))
+            x
+            (if (divides? x guess)
+                guess
+                (smallest-divisor x (next-odd guess)))))
+    (smallest-divisor x 2))
+
+(define (prime? x)
+    (= x (smallest-divisor x))
+)
+
+(define (fermat-little-theorem a p)
+    (= a (mod (^ a p) p)))
+
+(define (fermat-test n)
+    (define (fermat-test n stamina)
+        (define a (random n))
+        (if (zero? stamina) MAYBE-PRIME
+            (if (fermat-little-theorem a n)
+                (fermat-test n (decr stamina))
+                a)))
+    (fermat-test n 8))
+
+(define (timed-prime? n)
+    (define start (time))
+    (define result (prime? n))
+    (define end (time))
+    result)
+
+
+(define (pascal row column)
+    (cond
+            ((< row 0) 0)
+        ((and (= row 1) (= column 1)) 1)
+        ((< column 0) 0)
+        ((< row column) 0)
+        (true (+ (pascal (decr row) column) (pascal (decr row) (decr column))))
+    )
+)
+
+(define (ways-to-change amount coins)
+    (cond
+        ((zero? amount) 1)
+        ((< amount 0) 0)
+        ((nil? coins) 0)
+        (true (+ (ways-to-change (- amount (car coins)) coins)
+            (ways-to-change amount (cdr coins))))))
+
+;; (print (ways-to-change 100 (cons 1 (cons 5 (cons 10 (cons 25 (cons 50 nil)))))))
+
+(define (slow-pi stamina)
+    (define denom-first (map (lambda (x) (incr (* 4 (decr x)))) (iota stamina)))
+    (define denom-second (map (lambda (x) (+ 2 x)) denom-first))
+    (* 8 (fold + 0
+        (map (lambda (x) (/ (* (car x) (cdr x)))) (zip denom-first denom-second)))))
+
+(define (differential f)
+    (lambda (x)
+        (/ (- (f (+ x epsilon)) (f (- x epsilon)))
+           (twice epsilon))))
+
+;; start and end INCLUSIVE
+(define (summation term start next end)
+    (define (summation term start next end result)
+        (if (< end start)
+            result
+            (summation term (next start) next end (+ result (term start)))))
+    (summation term start next end 0))
+
+(define (product term start next end)
+    (define (product term start next end result)
+        (if (< end start)
+            result
+            (product term (next start) next end (* result (term start)))))
+    (product term start next end 1))
+
+(define (integral f start end)
+    (summation 
+        (lambda (i) (* epsilon (f i))) (+ start (/ epsilon 2)) 
+        (lambda (x) (+ x epsilon)) 
+        end)
+    )
+
+
+(define (integral f)
+    (lambda (end)
+        (define (integral f start end stamina)
+            (define n stamina)
+            (define epsilon (/ (- end start) n))
+            (define (simpson-term i)
+                (cond
+                    ((= i 0) (f start))
+                    ((= i n) (f end))
+                    ((even? i) (* 2 (f (+ start (* i epsilon)))))
+                    ((odd? i) (* 4 (f (+ start (* i epsilon)))))))
+            (* (/ epsilon 3) (summation simpson-term 0 incr n)))
+        (integral f 0 end 64)))
+
+(define (fast-pi stamina)
+    (define (pi-term i)
+        (* (/ i (incr i)) (/ (incr (incr i)) (incr i))))
+    (* (product pi-term 2 (lambda (x) (+ x 2)) (+ 2 stamina)) 4))
+
+;; Somehow make it work for all collections? rather than whats defined by (start, next, stop)?
+(define (accumulate combiner initial filter term start next end)
+    (define (accumulate combiner initial filter term start next end result)
+        (if (< end start)
+            result
+            (if (filter (term start))
+                (accumulate combiner initial filter term (next start) next end (combiner result (term start)))
+                (accumulate combiner initial filter term (next start) next end result))))
+    (accumulate combiner initial filter term start next end initial))
+
+(define (average x y) (/ (+ x y) 2))
+
+;; f(negative-x) and f(positive-x) has to be of different signs
+(define (bisect-solve f negative-x positive-x)
+    (define middle-x (average negative-x positive-x))
+    (define middle-y (f middle-x))
+    (cond
+        ((~= epsilon negative-x positive-x) middle-x)
+        ((~= epsilon 0 middle-y) middle-x)
+        ((< middle-y 0) (bisect-solve f middle-x positive-x))
+        ((< 0 middle-y) (bisect-solve f negative-x middle-x))
+        (true middle-x)))
+
+(define (solve f guess)
+    (define (solve f start neg-end pos-end hop)
+        (define start-y (f start))
+        (define pos-end-y (f pos-end))
+        (define neg-end-y (f neg-end))
+        (cond
+            ((and (<= start-y 0) (<= 0 pos-end-y)) (bisect-solve f start pos-end))
+            ((and (<= 0 start-y) (<= pos-end-y 0)) (bisect-solve f pos-end start))
+            ((and (<= start-y 0) (<= 0 neg-end-y)) (bisect-solve f start neg-end))
+            ((and (<= 0 start-y) (<= neg-end-y 0)) (bisect-solve f neg-end start))
+            (true (solve f start (- neg-end hop) (+ pos-end hop) (* hop 2)))))
+    (solve f guess guess guess 1))
+
+(define (fixed-point f x)
+    (let ((fx (f x)))
+        (if (~= epsilon x fx)
+            x
+            (fixed-point f fx))))
+
+(define (pi)
+  (bisect-solve sine 4 2))
+
+(define (sqrt x)
+  (fixed-point (lambda (y) (average y (/ x y))) 1))
+
+(define (golden-ratio)
+  (fixed-point (lambda (x) (+ 1 (/ x))) 1))
+
+(define (^ x y)
+    (if (zero? x)
+        0
+        (exp (* y (log x))))
+    )
+
+;; (define f (lambda (x) (- (^ 2 x) 10)))
+;; (solve f)
+
+;; (fixed-point (lambda (x) (/ (log 1000) (log x))) 2)
+(define (cont-frac n d k)
+    (define (cont-frac i)
+        (if (< k i)
+            0
+            (/ (n i) (+ (d i) (cont-frac (incr i))))))
+    (cont-frac 1))
+
+(define (cont-frac n d k)
+    (define (cont-frac i result)
+        (if (= k i)
+            result
+            (cont-frac (incr i) (/ (n (- k i)) (+ (d (- k i)) result)))))
+    (cont-frac 0 0))
+
+;; godlen-ratio = 1 + 1/golden-ratio
+(define (golden-ratio)
+    (incr (cont-frac (lambda (x) 1) (lambda (x) 1) 11)))
+
+;; GARBAGE
+(define (e-denom i)
+    (if (< i 3)
+        i
+        (if (= (mod (- i 2) 3) 0)
+            (* 2 (incr (floor (/ (- i 2) 3))))
+            1
+        )
+    )
+)
+(define (e)
+    (+ 2 (cont-frac (lambda (x) 1) e-denom 32))
+)
+
+(define (newton-raphson f guess)
+    (define (improve guess) (- guess (/ (f guess) ((differential f) guess))))
+    (fixed-point improve guess))
+
+(define (average-damp f)
+    (lambda (x) (average x (f x))))
+
+(define (sqrt x)
+    (solve (lambda (y) (- (* y y) x)) 0))
+
+(define (sqrt x)
+    (fixed-point (average-damp (lambda (y) (/ x y))) 1))
+
+(define (cbrt x)
+    (fixed-point (average-damp (lambda (y) (/ x (* y y)))) 1))
+
+(define (nthroot n x)
+    (fixed-point (apply (- n 1) average-damp (lambda (y) (/ x (^ y (- n 1))))) 1))
+
+(define (sqrt x)
+    (solve (lambda (y) (- (* y y) x)) 0))
+
+(define (sqrt x)
+    (fixed-point (average-damp (lambda (y) (/ x y))) 1))
+    
+(define (sqrt x)
+    (newton-raphson (lambda (y) (- (* y y) 2)) 1))
+
+;; div by zero
+;; (define (nthroot n x)
+;;     (solve (lambda (y) (- (/ x (^ y (- n 1))) y)) 1)
+;; )
+
+(define (tan x)
+    (define (tan i stamina)
+        (if (zero? stamina)
+            0
+            (/ (* x x) (- i (tan (+ 2 i) (decr stamina))))))
+    (/ (tan 1 32) 2))
+
+(define (apply-twice f)
+    (lambda (x)
+        (f (f x))))
+
+;; (((apply-twice (apply-twice apply-twice)) incr) 5)
+
+(define (compose f g)
+    (lambda (x)
+        (f (g x))))
+
+(define (repeated f n)
+    (define (repeated f result n)
+        (if (zero? n)
+            result
+            (repeated f (compose result f) (decr n))))
+    (repeated f identity n))
+
+(define (smoothed f)
+    (lambda (x)
+        (/ (+ (f (- x epsilon)) (f x) (f (+ x epsilon))) 3)))

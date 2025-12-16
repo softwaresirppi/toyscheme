@@ -1,0 +1,58 @@
+(load MATH.TOY)
+(define (make-point x y) (cons x y))
+(define (x-point point) (car point))
+(define (y-point point) (cdr point))
+
+(define (reduce-point op a b)
+    (make-point (op (x-point a) (x-point b)) (op (y-point a) (y-point b))))
+
+(define (map-point f a)
+    (make-point (f (x-point a)) (f (y-point a))))
+
+(define add-point (reduce-point +))
+(define sub-point (reduce-point -))
+(define mul-point (reduce-point *))
+(define div-point (reduce-point /))
+(define abs-point (map-point abs))
+(define (scale-point factor point) (map-point (* factor) point))
+
+(define (print-point point)
+    (print (quote <))
+    (print (x-point point))
+    (print (quote ,))
+    (print (y-point point))
+    (print (quote >))
+    (newline)
+)
+
+;; CURTAIN
+
+(define (make-seg start end) (cons start end))
+(define (start-seg seg) (car seg))
+(define (end-seg seg) (cdr seg))
+
+(define (midpoint seg)
+    (div-point 
+        (add-point (start-seg seg) (end-seg seg))
+        (make-point 2 2)))
+
+;; (print-point (midpoint (make-seg (make-point 1 1) (make-point 2 2))))
+
+;; CURTAIN
+
+(define (make-rect start-corner end-corner)
+    (cons start-corner end-corner))
+(define (start-corner rect) (car rect))
+(define (end-corner rect) (cdr rect))
+
+(define (height rect) (y-point (abs-point (sub-point (start-corner rect) (end-corner rect)))))
+(define (width rect) (x-point (abs-point (sub-point (start-corner rect) (end-corner rect)))))
+
+;; CURTAIN
+
+(define (peri-rect rect) (double (+ (height rect) (width rect))))
+
+
+(define (area-rect rect) (* (height rect) (width rect)))
+
+(area-rect (make-rect (make-point 1 1) (make-point 4 5)))

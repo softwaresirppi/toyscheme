@@ -1,0 +1,264 @@
+(load MATH.TOY)
+(define (nth n things)
+    (if (zero? n)
+        (car things)
+        (nth (decr n) (cdr things))))
+
+(define (iota n)
+    (if (zero? n)
+        nil
+        (cons n (iota (decr n)))))
+
+(define (whole-numbers n)
+    (map (- 1) (iota n)))
+
+(define (contains? x things)
+    (cond
+        ((not (cons? things)) false)
+        ((nil? things) false) 
+        ((= x (car things)) true)
+        (true (contains? x (cdr things)))))
+
+(define (before x things)
+    (if (nil? things)
+        nil
+        (if (= x (car things))
+            nil
+            (cons (car things) (before x (cdr things))))))
+
+(define (after x things)
+    (if (nil? things)
+        nil
+        (if (= x (car things))
+            (cdr things)
+            (after x (cdr things)))))
+
+; Right to Left
+; f takes x, rest
+; (thing1 f (thing2 f (thing3 f initial)))
+(define (fold f initial things)
+    (if (nil? things)
+        initial
+        (f (car things) (fold f initial (cdr things)))))
+
+; Left to Right
+; f takes rest, x
+(define (fold-left f initial things)
+    (define (fold-left-iter things result)
+        (if (nil? things)
+            result
+            (fold-left-iter (cdr things) (f result (car things)))))
+    (fold-left-iter things initial))
+
+;; WHAT THE? (fold (apply op) init (transpose seqs))
+(define (fold-n op init seqs)
+  (if (nil? (car seqs))
+      nil
+      (cons (fold op init (map car seqs))
+            (fold-n op init (map cdr seqs)))))
+
+(define (map f things)
+    (fold (lambda (first rest) (cons (f first) rest)) nil things))
+
+(define (map f things)
+    (if (nil? things)
+        nil
+        (cons (f (car things)) (map f (cdr things)))))
+
+(define (flat-map f things)
+    (fold append nil (map f things)))
+
+(define (deep-map f things)
+    (if (nil? things)
+        nil
+        (if (not (cons? things))
+            (f things)
+            (cons (deep-map f (car things)) (deep-map f (cdr things))))))
+
+(define (select f things)
+    (if (nil? things)
+        nil
+        (if (f (car things))
+            (cons (car things) (select f (cdr things)))
+            (select f (cdr things)))))
+
+(define (zip as bs)
+    (if (or (nil? as) (nil? bs))
+        nil
+        (cons [(car as) (car bs)] (zip (cdr as) (cdr bs)))))
+
+(define (length xs)
+    (if (nil? xs)
+        0
+        (incr (length (cdr xs)))))
+
+(define (deep-length xs)
+    (if (nil? xs)
+        0
+        (if (not (cons? xs))
+            1
+            (sum* (map deep-length xs)))))
+
+(define (append as bs)
+    (if (nil? as)
+        bs
+        (cons (car as) (append (cdr as) bs))))
+
+(define (take n xs)
+    (if (zero? n)
+        nil
+        (cons (car xs) (take (decr n) (cdr xs)))))
+
+
+(define (drop n xs)
+    (if (zero? n)
+        xs
+        (drop (decr n) (cdr xs))))
+
+(define (last xs)
+    (if (nil? xs)
+        nil
+        (if (nil? (cdr xs))
+            (car xs)
+            (last (cdr xs)))))
+
+; aka (fold-left (flip cons) nil) LOL
+(define (reverse xs)
+    (if (nil? xs)
+        nil
+        (cons (last xs) (reverse (take (decr (length xs)) xs)))))
+
+(define (deep-reverse xs)
+    (if (nil? xs)
+        nil
+        (if (not (cons? xs))
+            xs
+            (reverse (map deep-reverse xs)))))
+
+(define (flatten xs)
+    (if (nil? xs)
+        nil
+        (if (not (cons? xs))
+            [xs]
+            (fold append nil (map flatten xs))
+        )
+    )
+)
+;subsets of {1 2 3} = {} {1} {2} {3} {1 2} {1 3} {2 3} {1 2 3}
+;subsets of {2 3} = {} {2} {3} {2 3}
+;subsets of {3} = {} {3}
+;subsets of {} = {}
+(define (subsets xs)
+    (if (nil? xs)
+        [[]]
+        (let ((kutti-subsets (subsets (cdr xs))))
+            (append (map (cons (car xs)) kutti-subsets) kutti-subsets))))
+
+
+; arrangements of 1 2 3 = {{1 2 3}, {1 3 2}, {2 1 3}, {2 3 1}, {3 1 2}, {3 2 1}}
+; arrangements of 2 3 = {{2 3}, {3 2}}
+; arrangements of 1 = {{1}}
+; arrangements of {} = {}
+
+(define (arrangements xs)
+    (if (nil? xs)
+        [[]]
+        (flat-map
+            (lambda (x)
+                (map (cons x) (arrangements (select (!= x) xs)))) 
+            xs
+        )
+    )
+)
+
+; A + Bx + Cx^2 + Dx^3 = A + x * (B + Cx + Dx^2)
+; Its the same as (fold (lambda (coeff poly) (+ coeff (* x poly))) 0)
+(define (polynomial coefficients x)
+    (if (nil? coefficients)
+        0
+        (+ (car coefficients) (* x (polynomial (cdr coefficients) x)))))
+
+(define (same-parity xs)
+    (select (lambda (x) (= (even? x) (even? (car xs)))) xs))
+
+(define sum (fold + 0))
+(define product (fold * 1))
+(define and* (fold (lambda (x y) (and x y)) true))
+(define or* (fold (lambda (x y) (or x y)) false))
+(define (average numbers) (/ (sum numbers) (length numbers)))
+(define min* (fold min infinity))
+(define max* (fold max -infinity))
+
+(define (caar x) (car (car x)))    ; First of first
+(define (cadr x) (car (cdr x)))    ; First of rest = second element
+(define (cdar x) (cdr (car x)))    ; Rest of first  
+(define (cddr x) (cdr (cdr x)))    ; Rest of rest
+(define (caaar x) (car (car (car x))))    ; First of first of first
+(define (caadr x) (car (car (cdr x))))    ; First of first of rest
+(define (cadar x) (car (cdr (car x))))    ; First of rest of first
+(define (caddr x) (car (cdr (cdr x))))    ; First of rest of rest = third element
+(define (cdaar x) (cdr (car (car x))))    ; Rest of first of first
+(define (cdadr x) (cdr (car (cdr x))))    ; Rest of first of rest
+(define (cddar x) (cdr (cdr (car x))))    ; Rest of rest of first
+(define (cdddr x) (cdr (cdr (cdr x))))    ; Rest of rest of rest
+(define (caaaar x) (car (car (car (car x)))))    ; First of first of first of first
+(define (caaadr x) (car (car (car (cdr x)))))    ; First of first of first of rest  
+(define (caadar x) (car (car (cdr (car x)))))    ; First of first of rest of first
+(define (caaddr x) (car (car (cdr (cdr x)))))    ; First of first of rest of rest
+(define (cadaar x) (car (cdr (car (car x)))))    ; First of rest of first of first
+(define (cadadr x) (car (cdr (car (cdr x)))))    ; First of rest of first of rest
+(define (caddar x) (car (cdr (cdr (car x)))))    ; First of rest of rest of first
+(define (cadddr x) (car (cdr (cdr (cdr x)))))    ; First of rest of rest of rest = fourth element
+(define (cdaaar x) (cdr (car (car (car x)))))    ; Rest of first of first of first
+(define (cdaadr x) (cdr (car (car (cdr x)))))    ; Rest of first of first of rest
+(define (cdadar x) (cdr (car (cdr (car x)))))    ; Rest of first of rest of first  
+(define (cdaddr x) (cdr (car (cdr (cdr x)))))    ; Rest of first of rest of rest
+(define (cddaar x) (cdr (cdr (car (car x)))))    ; Rest of rest of first of first
+(define (cddadr x) (cdr (cdr (car (cdr x)))))    ; Rest of rest of first of rest
+(define (cdddar x) (cdr (cdr (cdr (car x)))))    ; Rest of rest of rest of first
+(define (cddddr x) (cdr (cdr (cdr (cdr x)))))    ; Rest of rest of rest of rest
+
+; SICP 2.2.3
+; (select (dot prime? sum) 
+;   (select (dot (= 2) length)
+;     (subsets (iota 6))))
+
+;; (load PRIME)
+;; (select (dot prime? sum) 
+    ;; (flat-map
+    ;;     (lambda (i)
+    ;;         (map
+    ;;             (lambda (j) [i j])
+    ;;             (iota (decr i))))
+    ;;     (iota 6)))
+
+(define (pairs n)
+    (flat-map
+        (lambda (i)
+            (map
+                (lambda (j)
+                    [i j]
+                )
+                (iota i)
+            )
+        )
+        (iota n)
+    )
+)
+
+(define (triplets n)
+    (flat-map
+        (lambda (i)
+            (flat-map
+                (lambda (j)
+                    (map
+                        (lambda (k) [i j k])
+                        (iota j)
+                    )
+                )
+                (iota (decr i))
+            )
+        )
+        (iota n)
+    )
+)

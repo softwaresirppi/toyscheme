@@ -1,0 +1,41 @@
+
+(begin-music! 2)
+(play-sine-wave! 200 0 0.5)
+(play-sine-wave! 400 0.5 1)
+(play-sine-wave! 600 1 1.5)
+(play-sine-wave! 800 1.5 2)
+(end-music!)
+;; ===== ABSTRACTION CURTAIN =====
+
+; PRIMITIVES: player
+; Combinations; overlap, chain.
+; Abstraction: define (as usual)
+
+(define (sine-wave freq from to)
+    (play-sine-wave! freq from to))
+
+(define (overlap factor f g duration from to)
+    (define half (/ duration 2))
+    (f half from to)
+    (g half from to)
+)
+
+(define (chain factor f g duration from to)
+    (define middle (* factor (- to from)))
+    (f 1 from middle)
+    (g 1 middle to))
+
+(define (play-music duration music)
+    (begin-music! duration)
+    (music 0.5 0 duration)
+    (end-music!))
+
+(play-music 3
+    (overlap (/ 1 3)
+        (sine-wave 261.63)
+        (overlap (/ 1 2)
+            (sine-wave 311.13)
+            (sine-wave 392)
+        )
+    )
+)

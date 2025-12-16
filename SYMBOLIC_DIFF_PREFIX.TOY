@@ -1,0 +1,148 @@
+; TODO: Expand to multi args
+; TODO: Expand to infix
+
+(load LIST.TOY)
+
+(define plus (quote +))
+(define times (quote *))
+(define power (quote ^))
+
+(define (algebraic? expression)
+    (cond
+        ((variable? expression)
+            true)
+        ((constant? expression)
+            false)
+        ((sum? expression)
+            (or (algebraic? (augend expression)) (algebraic? (addend expression))))
+        ((product? expression)
+            (or (algebraic? (multiplier expression)) (algebraic? (multiplicand expression))))
+        ((power? expression)
+            (or (algebraic? (base expression)) (algebraic? (exponent expression))))
+        (true (error THERIYATHU))))
+
+(define constant? number?)
+(define (same-constant? x y)
+    (and* 
+        [(constant? x) 
+         (constant? y) 
+         (= x y)]))
+
+(define variable? symbol?)
+(define (same-variable? x y)
+    (and* 
+        [(variable? x) 
+         (variable? y) 
+         (= x y)]))
+
+(define (make-sum a b)
+    (cond
+        ((same-constant? a 0)
+            b)
+        ((same-constant? b 0)
+            a)
+        ((and (constant? a) (constant? b))
+            (+ a b))
+        (true 
+            [plus a b])))
+
+(define augend cadr)
+(define (addend expression)
+    (fold make-sum 0 (cddr expression)))
+
+(define (sum? expression)
+    (and (cons? expression) (= (car expression) plus)))
+
+(define (make-product a b)
+    (cond
+        ((same-constant? a 1)
+            b)
+        ((same-constant? b 1)
+            a)
+        ((same-constant? a 0)
+            0)
+        ((same-constant? b 0)
+            0)
+        ((and (constant? a) (constant? b))
+            (* a b))
+        (true 
+            [times a b])))
+
+(define multiplier cadr)
+(define (multiplicand expression)
+    (fold make-product 1 (cddr expression)))
+
+(define (product? expression)
+    (and (cons? expression) (= (car expression) times)))
+
+(define (make-power x n)
+    (cond
+        ((and (same-constant? x 0) (same-constant? n 0))
+            (error THERIYATHU))
+        ((same-constant? n 0)
+            1)
+        ((same-constant? n 1)
+            x)
+        ((same-constant? x 0)
+            0)
+        ((same-constant? x 1)
+            1)
+        ((and (constant? x) (constant? n))
+            (^ x n))
+        (true [power x n])))
+
+(define base cadr)
+(define (exponent expression)
+    (fold make-power 1 (cddr expression)))
+
+(define (power? expression)
+    (and (cons? expression) (= (car expression) power)))
+
+;; ==== ABSTRACTION CURTAIN ====
+;; You are provided with an algebraic language.
+
+(define (simplified expression)
+    (cond
+        ((constant? expression)
+            expression)
+        ((variable? expression)
+            expression)
+        ((sum? expression)
+            (make-sum
+                (simplified (augend expression))
+                (simplified (addend expression))))
+        ((product? expression)
+            (make-product
+                (simplified (multiplier expression))
+                (simplified (multiplicand expression))))
+        ((power? expression)
+            (make-power
+                (simplified (base expression))
+                (simplified (exponent expression))))
+        (true expression)))
+
+(define (differential expression variable)
+    (cond
+        ((constant? expression)
+            0)
+        ((variable? expression)
+            (if (same-variable? expression variable)
+                1
+                0))
+        ((sum? expression)
+            (make-sum
+                (differential (augend expression) variable)
+                (differential (addend expression) variable)))
+        ((product? expression)
+            (make-sum
+                (make-product (differential (multiplier expression) variable) (multiplicand expression))
+                (make-product (multiplier expression) (differential (multiplicand expression) variable))))
+        ((and (power? expression) (not (algebraic? (exponent expression))))
+            (make-product
+                (make-product
+                    (exponent expression)
+                    (make-power
+                        (base expression)
+                        (make-sum -1 (exponent expression))))
+                (differential (base expression) variable)))
+        (true (error THERIYATHU))))

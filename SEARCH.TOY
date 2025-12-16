@@ -1,0 +1,53 @@
+;; one dimentional:
+;; linear
+;; binary - sorted
+;; exponential - sorted and unbounded
+;; interpolation - uniform
+;; fibonacci search
+;; jump search
+;; block indexed search
+
+;; n dimentional:
+;; depth first search - path
+;; breadth first search - short path
+;; bfs but choose low cost
+
+;; bfs but choose the one with better heuristic
+;; A*
+;; Dijkstra (traverse and maintain a table with nodes and distances from source)
+;; bellman-ford
+;; floyd-warshall
+
+
+;; Prim Kruskal - find minimum spanning tree
+
+;; ???
+;; Ford fulkerson
+
+
+;; Sorting:
+;; Bubble
+;; Insertion
+;; Selection
+;; Quick
+;; Merge
+;; Radix
+
+
+;; d = 384,400km
+;; s = 299792m/s
+
+;; s = d/t 
+;; t = d/s = 
+
+
+;; linear = one dimentional dfs or bfs
+;; binary = dfs but pick the right one
+;; exponential = 
+
+;; dfs(thing, childrens, child-pick, target)
+;; bfs(thing, childrens, child-pick, target)
+
+;; IM GIVING UP.
+;; USE STREAMS TO TRAVERSE data structures and build searches based on those. aight, im out.
+;; But still how would you take out separate traversal paths?
