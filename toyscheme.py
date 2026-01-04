@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
-#include <stdiom.h>
+#include <stdio.h>
 from time import time
 from math import *
 from random import randint

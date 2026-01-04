@@ -119,4 +119,4 @@
 ;; ==== ABSTRACTION CURTAIN ====
 ;; You are provided bst-with, bst-without, bst-lookup, bst-min, bst-max
 
-;; (define tree (bst-with 7 (bst-with 6 (bst-with 5 (bst-with 4 (bst-with 3 (bst-with 2 (bst-with 1 nil))))))))
+(define tree (bst-with 7 (bst-with 6 (bst-with 5 (bst-with 4 (bst-with 3 (bst-with 2 (bst-with 1 nil))))))))
