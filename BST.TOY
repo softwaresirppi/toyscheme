@@ -1,4 +1,5 @@
 (load MATH.TOY)
+(load LIST.TOY)
 
 (define (bst-node value left right)
     ; It's hi-how-are-you officer, not how-hi-are-you!
@@ -116,7 +117,34 @@
                         (left node)
                         (bst-without key (bst-min (right node)) (right node)))))))))
 
-;; ==== ABSTRACTION CURTAIN ====
-;; You are provided bst-with, bst-without, bst-lookup, bst-min, bst-max
+(define (inorder node)
+    (if (nil? node)
+        nil
+        (append 
+            (inorder (left node))
+            (cons (value node) (inorder (right node))))))
 
-(define tree (bst-with 7 (bst-with 6 (bst-with 5 (bst-with 4 (bst-with 3 (bst-with 2 (bst-with 1 nil))))))))
+(define (make-bst elements)
+    (define half (floor (/ (length elements) 2)))
+    (if (nil? elements)
+        nil
+        (bst-node 
+            (car (drop half elements)) 
+            (make-bst (take half elements))
+            (make-bst (cdr (drop half elements))))))
+
+;; ==== ABSTRACTION CURTAIN ====
+;; You are provided bst-with, bst-without, bst-lookup, bst-min, bst-max, inorder, make-bst
+
+(define (identity x) x)
+(define tree (bst-with identity 7 (bst-with identity 6 (bst-with identity 5 (bst-with identity 4 (bst-with identity 3 (bst-with identity 2 (bst-with identity 1 nil))))))))
+
+(define (bst-union a b)
+    (make-bst (union-sorted (inorder a) (inorder b))))
+
+(define (bst-intersection a b)
+    (make-bst (intersection-sorted (inorder a) (inorder b))))
+
+(define a (fold (bst-with identity) nil [1 2 3 4 5 6 7 8]))
+(define b (fold (bst-with identity) nil [5 6 7 8 9 10 11 12]))
+(bst-intersection a b)

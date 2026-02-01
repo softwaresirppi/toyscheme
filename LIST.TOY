@@ -262,3 +262,30 @@
         (iota n)
     )
 )
+
+(define (union-sorted key as bs)
+    (if (or (nil? as) (nil? bs))
+        (append as bs)
+        (cond
+            ((<= (key (car as)) (key (car bs))) (cons (car as) (union-sorted key (cdr as) bs)))
+            ((< (key (car bs)) (key (car as))) (cons (car bs) (union-sorted key as (cdr bs)))))))
+
+(define (intersection-sorted key as bs)
+    (if (or (nil? as) (nil? bs))
+        nil
+        (cond
+            ((< (key (car as)) (key (car bs))) (intersection-sorted key (cdr as) bs))
+            ((< (key (car bs)) (key (car as))) (intersection-sorted key as (cdr bs)))
+            ((= (key (car as)) (key (car bs))) (cons (car as) (intersection-sorted key (cdr as) (cdr bs)))))))
+
+(define (cons-sorted ley x rest)
+    (union-sorted key [x] rest))
+
+; MERGE SORT IS THAT SIMPLE? YES IT FUKIN IS.
+(define (sort-by key elements)
+    (define half (floor (/ (length elements) 2)))
+    (if (< (length elements) 2)
+        elements
+        (union-sorted key 
+            (sort-by key (take half elements))
+            (sort-by key (drop half elements)))))

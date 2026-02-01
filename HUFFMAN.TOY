@@ -1,0 +1,83 @@
+(load LIST.TOY)
+
+(define (huffman-node symbols weight left right)
+    [symbols weight left right])
+
+(define (symbols node) (car node))
+(define (weight node) (car (cdr node)))
+(define (left node) (car (cdr (cdr node))))
+(define (right node) (car (cdr (cdr (cdr node)))))
+
+;; ABSTRACTION CURTAIN
+(define (huffman-leaf symbol weight)
+    (huffman-node [symbol] weight nil nil))
+
+(define (merge-node a b)
+    (huffman-node 
+        (append (symbols a) (symbols b))
+        (+ (weight a) (weight b))
+        a b))
+
+(define (partition-by key things)
+    (define (partition things key left left-sum right right-sum)
+        (if (nil? things)
+            [(reverse left) (reverse right)]
+            (if (< left-sum right-sum)
+                (partition
+                    (cdr things) key
+                    (cons (car things) left) (+ (key (car things)) left-sum)
+                    right right-sum)
+                (partition
+                    (cdr things) key
+                    left left-sum
+                    (cons (car things) right) (+ (key (car things)) right-sum)))))
+    (partition things key [] 0 [] 0))
+
+; I CRAVE PATTERN MATCHING.
+; (huffman-tree nil) = nil
+; (huffman-tree [x]) = x
+; (huffman-tree things) = (merge-node (huffman-tree left) (huffman-tree right))
+;   where left, right = (partition-by weight nodes)
+(define (huffman-tree nodes)
+    (define (huffman-tree-of-sorted nodes)
+        (define partitions (partition-by weight nodes))
+        (define left (car partitions))
+        (define right (car (cdr partitions)))
+        (cond
+            ((nil? nodes)
+                nodes)
+            ((= (length nodes) 1)
+                (car nodes))
+            (true (merge-node 
+                    (huffman-tree-of-sorted left)
+                    (huffman-tree-of-sorted right))) ))
+    (huffman-tree-of-sorted
+        (reverse (sort-by weight nodes))))
+
+(define (huffman-code tree symbol)
+    (cond
+        ((and (not (nil? (left tree))) (contains? symbol (symbols (left tree))))
+            (cons 0 (huffman-code (left tree) symbol)))
+        ((and (not (nil? (right tree))) (contains? symbol (symbols (right tree))))
+            (cons 1 (huffman-code (right tree) symbol)))
+        (true nil)))
+
+;; ABSTRACTION CURTAIN
+
+;; (define (huffman-tree nodes)
+;;     (if (= (length nodes) 1)
+;;         (car nodes)
+;;         (huffman-tree
+;;             (union-sorted weight
+;;                 [(merge-node (car nodes) (car (cdr nodes)))]
+;;                 (cdr (cdr nodes))))))
+
+(define tree
+    (huffman-tree
+        [(huffman-leaf A 1)
+        (huffman-leaf B 2)
+        (huffman-leaf C 3)
+        (huffman-leaf D 4)
+        (huffman-leaf E 5)]))
+
+(map (huffman-code tree) [A B C D E])
