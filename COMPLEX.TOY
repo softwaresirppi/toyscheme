@@ -1,0 +1,93 @@
+(load ROOT.TOY)
+(load MATH.TOY)
+(load TRIG.TOY)
+
+(define (tagged tag object)
+    (cons tag object))
+
+(define (tag x)
+    (car x))
+
+(define (object x)
+    (cdr x))
+
+;; ===== ABSTRACTION CURTAIN =====
+
+(define (make-complex-rect real imaginary)
+    (tagged RECT [real imaginary]))
+
+(define (rect? x)
+    (= (tag x) RECT))
+
+(define (real-part-rect x)
+    (car (object x)))
+
+(define (imag-part-rect x)
+    (car (cdr (object x))))
+
+(define (magnitude-rect x)
+    (sqrt (+ (square (real-part-rect x)) (square (imag-part-rect x)))))
+
+(define (angle-rect x)
+    (arctan (/ (real-part-rect x) (imag-part-rect x))))
+
+
+(define (make-complex-polar magnitude angle)
+    (tagged POLAR [magnitude angle]))
+
+(define (polar? x)
+    (= (tag x) POLAR))
+
+(define (magnitude-polar x)
+    (car (object x)))
+
+(define (angle-polar x)
+    (car (cdr (object x))))
+
+(define (real-part-polar x)
+    (* (magnitude-polar x) (cosine (angle-polar x))))
+
+(define (imag-part-polar x)
+    (* (magnitude-polar x) (sine (angle-polar x))))
+
+;; ===== ABSTRACTION CURTAIN =====
+;; Generic layer
+(define (angle-complex x)
+    (cond
+        ((rect? x) (angle-rect x)
+        ((polar? x) (angle-polar x))))
+
+(define (real-part-complex x)
+    (cond
+        ((rect? x) (real-part-rect x))
+        ((polar? x) (real-part-polar x))))
+
+(define (imag-part-complex x)
+    (cond
+        ((rect? x) (imag-part-rect x))
+        ((polar? x) (imag-part-polar x))))
+
+(define (magnitude-complex x)
+    (cond
+        ((rect? x) (magnitude-rect x))
+        ((polar? x) (magnitude-polar x))))
+
+(define (add-complex a b)
+    (make-complex-rect 
+        (+ (real-part-complex a) (real-part-complex b))
+        (+ (imag-part-complex a) (imag-part-complex b))))
+
+(define (sub-complex a b)
+    (make-complex-rect 
+        (- (real-part-complex a) (real-part-complex b))
+        (- (imag-part-complex a) (imag-part-complex b))))
+
+(define (mult-complex a b)
+    (make-complex-polar
+        (* (magnitude-complex a) (magnitude-complex b))
+        (+ (angle-complex a) (angle-complex b))))
+
+(define (mult-complex a b)
+    (make-complex-polar
+        (/ (magnitude-complex a) (magnitude-complex b))
+        (- (angle-complex a) (angle-complex b))))

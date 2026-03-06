@@ -1,4 +1,15 @@
 (load MATH.TOY)
+(load NUMERIC.TOY)
+
+(define (sine x)
+    (define (sine-term i)
+        (*
+            (if (odd? i) -1 +1)
+            (/
+                (^ x (double i))
+                (factorial (double i)))))
+    (sum-range sine-term 0 incr 64))
+
 (define (sine x)
     (define epsilon 0.0001)
     (cond 
@@ -14,20 +25,27 @@
         (if (zero? stamina)
             0
             (/ (* x x) (- i (tan (+ 2 i) (decr stamina))))))
-    (/ (tan 1 32) 2))
+    (/ x (- 1 (tan 3 64))))
 
 ; what if these trigonometry functions output a stream of values which are getting more and more precise?
 ; you can find the fixed-point of it for desired precision.
 
-(define (sine x n)
-    (define (sine-term i)
-        (*
+(define (arctan x)
+    (define (arctan-term i)
+        (define odd (incr (* 2 i)))
+        (* 
             (if (odd? i) -1 +1)
-            (/
-                (^ x (double i))
-                (factorial (double i))
-            )
-        )
-    )
-    (sum-range sine-term 0 incr n)
-)
+            (/ (^ x odd) odd)))
+    (cond
+        ((< x 0) (* -1 (arctan (* -1 x))))
+        ((< 1 (abs x)) (- (/ pi 2) (arctan (/ 1 x))))
+        (true (sum-range arctan-term 0 incr 64))))
+
+(define (arcsin x)
+    (cond
+        ((= x 1) (/ pi 2))
+        ((= x -1) (- (/ pi 2)))
+        (else (arctan (/ x (sqrt (- 1 (square x))))))))
+
+(define (arccos x)
+    (- (/ pi 2) (arcsin x)))

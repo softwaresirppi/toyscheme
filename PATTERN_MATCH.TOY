@@ -1,0 +1,128 @@
+(load LIST.TOY)
+(load FUNCTIONS.TOY)
+
+(define (make-binding key value)
+    (cons key value))
+
+(define (binding-key bind)
+    (car bind))
+
+(define (binding-value bind)
+    (cdr bind))
+
+;; ABSTRACTION CURTAIN
+
+(define (with-binding bind bindings)
+    (if (= bindings FAILED)
+        FAILED
+        (begin
+            (define bound-to (lookup-bindings (binding-key bind) bindings))
+            (cond
+                ((= bound-to nil) (cons bind bindings))
+                ((= bound-to (binding-value bind)) bindings)
+                ((!= bound-to (binding-value bind)) FAILED)))))
+
+(define (union-bindings a b)
+    (cond
+        ((= a FAILED) FAILED)
+        ((nil? a) b)
+        (true (with-binding (car a) (union-bindings (cdr a) b)))))
+
+(define (lookup-bindings key bindings)
+    (cond
+        ((= bindings FAILED) nil)
+        ((nil? bindings) nil)
+        ((= (binding-key (car bindings)) key) (binding-value (car bindings)))
+        (true (lookup-bindings key (cdr bindings)))))
+
+(define empty-bindings nil)
+;; ABSTRACTION CURTAIN
+
+(define (make-unknown x)
+    [(quote ?) x])
+
+(define (unknown? x)
+    (if (cons? x)
+        (= (car x) (quote ?))
+        false))
+
+(define (unknown-name x)
+    (car (cdr x)))
+
+;; ABSTRACTION CURTAIN
+
+(define (deconstruct pattern value)
+    (cond 
+        ((and (nil? pattern) (nil? value))
+            empty-bindings)
+        ((or (nil? pattern) (nil? value))
+            FAILED)
+        ((atom? pattern)
+            (if (= pattern value)
+                empty-bindings
+                FAILED))
+        ((unknown? pattern)
+            (with-binding (make-binding (unknown-name pattern) value) nil))
+        (true
+            (union-bindings
+                (deconstruct (car pattern) (car value))
+                (deconstruct (cdr pattern) (cdr value))))))
+
+(define (construct pattern bindings)
+    (cond
+        ((nil? pattern)
+            pattern)
+        ((atom? pattern) 
+            pattern)
+        ((unknown? pattern) 
+            (lookup-bindings (unknown-name pattern) bindings))
+        (true 
+            (cons 
+                (construct (car pattern) bindings)
+                (construct (cdr pattern) bindings)))))
+
+;; types, guards
+;; ...
+;; actual lisp evaluation in pattern
+    ;; eval apply implementation
+    ;; define-macro
+(define (match-rule rule value)
+    (define (apply-rule rule value)
+        (define pattern (car rule))
+        (define skeleton (car (cdr rule)))
+        (define binds (deconstruct pattern value))
+        (if (= binds FAILED)
+            value
+            (construct skeleton 
+                (deconstruct pattern value))))
+    (if (cons? value)
+        (apply-rule rule
+                (cons (match-rule rule (car value))
+                    (match-rule rule (cdr value))))
+        (apply-rule rule value)))
+
+(define (match rules value)
+    (if (nil? rules)
+        value
+        (match (cdr rules) (match-rule (car rules) value))))
+
+(define (recursive-match rules value)
+    (fixed-point (match rules) value))
+;; (match-rule (quote (B BANANA)) (quote (A B (C D))))
+(recursive-match
+    (quote
+        (
+            ;; ((* (? C) (+ (? A) (? B)))
+            ;;     (+ (* (? C) (? A)) (* (? C) (? B))))
+            ;; ((+ (? A) (? B))
+            ;;     SOME-SUM)
+            (1 ONE)
+            (2 TWO)
+            (3 THREE)
+        )
+    )
+    (quote 
+        ((NIGGA 1) (NIGGA 2) (NIGGA 3))
+    )
+) ;; constructs to ((+ (* 2 1) (* 2 3)))
+

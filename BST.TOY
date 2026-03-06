@@ -1,64 +1,68 @@
 (load MATH.TOY)
 (load LIST.TOY)
 
-(define (bst-node value left right)
+(define (bst-node bst-value left right)
     ; It's hi-how-are-you officer, not how-hi-are-you!
-    (define how-high-are-you (+ 1 (max (height left) (height right))))
-    [left value how-high-are-you right])
+    (define how-high-are-you (+ 1 (max (bst-height left) (bst-height right))))
+    [left bst-value how-high-are-you right])
 
-(define (value node)
+(define (bst-value node)
     (car (cdr node)))
 
-(define (left node)
-    (car node))
+(define (bst-left node)
+    (if (nil? node)
+        node
+        (car node)))
 
-(define (right node)
-    (car (cdr (cdr (cdr node)))))
+(define (bst-right node)
+    (if (nil? node)
+        node
+        (car (cdr (cdr (cdr node))))))
 
-(define (height node)
+(define (bst-height node)
     (if (nil? node)
         0
         (car (cdr (cdr node)))))
 
 ; ==== ABSTRACTION CURTAIN ====
-; You are provided with tools to mess with a node. bst-node, value, left, right, height
+; You are provided with tools to mess with a node. bst-node, bst-value, bst-left, bst-right, bst-height
 
 (define (left-tug node)
-    (bst-node (value (left node))
-        (left (left node))
-        (bst-node (value node)
-            (right (left node))
-            (right node))))
+    (bst-node (bst-value (bst-left node))
+        (bst-left (bst-left node))
+        (bst-node (bst-value node)
+            (bst-right (bst-left node))
+            (bst-right node))))
 
 (define (right-tug node)
-    (bst-node (value (right node))
-        (bst-node (value node)
-            (left node)
-            (left (right node)))
-        (right (right node))))
+    (bst-node (bst-value (bst-right node))
+        (bst-node (bst-value node)
+            (bst-left node)
+            (bst-left (bst-right node)))
+        (bst-right (bst-right node))))
 
 (define (right-left-tug node)
     (right-tug
-        (bst-node
-            (left node)
-            (left-tug (right node)))))
+        (bst-node (bst-value node)
+            (bst-left node)
+            (left-tug (bst-right node)))))
 
 (define (left-right-tug node)
     (left-tug
-        (bst-node
-            (right-tug (left node))
-            (right node))))
+        (bst-node (bst-value node)
+            (right-tug (bst-left node))
+            (bst-right node))))
 
 (define (rebalance node)
     (define (balance-factor node)
-        (- (height (right node)) (height (left node))))
+        (- (bst-height (bst-right node)) (bst-height (bst-left node))))
     (cond
         ((< (balance-factor node) -1)
-            (if (< (balance-factor (left node)) 0)
+            (if (< (balance-factor (bst-left node)) 0)
                 (left-tug node)
                 (left-right-tug node)))
         ((< +1 (balance-factor node))
-            (if (< (balance-factor (right node)) 0)
+            (if (< (balance-factor (bst-right node)) 0)
                 (right-left-tug node)
                 (right-tug node)))
         (true node)))
@@ -66,63 +70,86 @@
 (define (bst-lookup key target_key node)
     (cond
         ((nil? node) nil)
-        ((< target_key (key (value node))) (bst-lookup key target_key (left node)))
-        ((< (key (value node)) target_key) (bst-lookup key target_key (right node)))
-        ((= target_key (key (value node))) (value node))))
+        ((< target_key (key (bst-value node))) (bst-lookup key target_key (bst-left node)))
+        ((< (key (bst-value node)) target_key) (bst-lookup key target_key (bst-right node)))
+        ((= target_key (key (bst-value node))) (bst-value node))))
 
 (define (bst-with key x node)
     (cond
         ((nil? node) (bst-node x nil nil))
-        ((< (key x) (key (value node))) 
-            (rebalance (bst-node (value node)
-                (bst-with key x (left node))
-                (right node))))
-        ((< (key (value node)) (key x))
-            (rebalance (bst-node (value node)
-                (left node)
-                (bst-with key x (right node)))))
+        ((< (key x) (key (bst-value node))) 
+            (rebalance (bst-node (bst-value node)
+                (bst-with key x (bst-left node))
+                (bst-right node))))
+        ((<= (key (bst-value node)) (key x))
+            (rebalance (bst-node (bst-value node)
+                (bst-left node)
+                (bst-with key x (bst-right node)))))
         (true node)))
 
 (define (bst-min node)
     (if (nil? node)
         nil
-        (if (nil? (left node))
-            (value node)
-            (bst-min (left node)))))
+        (if (nil? (bst-left node))
+            (bst-value node)
+            (bst-min (bst-left node)))))
 
 (define (bst-max node)
     (if (nil? node)
         nil
-        (if (nil? (right node))
-            (value node)
-            (bst-max (right node)))))
+        (if (nil? (bst-right node))
+            (bst-value node)
+            (bst-max (bst-right node)))))
+
+(define (bst-without-min node)
+    (cond
+        ((nil? node) node)
+        ((nil? (bst-left node)) (bst-right node))
+        (true (rebalance (bst-node (bst-value node)
+            (bst-without-min (bst-left node))
+            (bst-right node))))))
+
+(define (bst-without-max node)
+    (cond
+        ((nil? node) node)
+        ((nil? (bst-right node)) (bst-left node))
+        (true (rebalance (bst-node (bst-value node)
+            (bst-left node)
+            (bst-without-max (bst-right node)))))))
 
 (define (bst-without key some_key node)
     (cond
         ((nil? node) node)
-        ((< some_key (key (value node)))
-            (rebalance (bst-node (value node)
-                (bst-without key some_key (left node))
-                (right node))))
-        ((< (key (value node)) some_key)
-            (rebalance (bst-node (value node)
-                (left node)
-                (bst-without key some_key (right node)))))
-        ((= some_key (key (value node)))
+        ((< some_key (key (bst-value node)))
+            (rebalance (bst-node (bst-value node)
+                (bst-without key some_key (bst-left node))
+                (bst-right node))))
+        ((< (key (bst-value node)) some_key)
+            (rebalance (bst-node (bst-value node)
+                (bst-left node)
+                (bst-without key some_key (bst-right node)))))
+        ((= some_key (key (bst-value node)))
             (cond 
-                ((nil? (left node)) (right node))
-                ((nil? (right node)) (left node))
+                ((nil? (bst-left node)) (bst-right node))
+                ((nil? (bst-right node)) (bst-left node))
                 (true
-                    (rebalance (bst-node (bst-min (right node))
-                        (left node)
-                        (bst-without key (bst-min (right node)) (right node)))))))))
+                    (rebalance (bst-node (bst-min (bst-right node))
+                        (bst-left node)
+                        (bst-without key (bst-min (bst-right node)) (bst-right node)))))))))
+
+(define (bst-size node)
+    (if (nil? node) 
+        0
+        (incr (+ 
+            (bst-size (bst-left node))
+            (bst-size (bst-right node))))))
 
 (define (inorder node)
     (if (nil? node)
         nil
         (append 
-            (inorder (left node))
-            (cons (value node) (inorder (right node))))))
+            (inorder (bst-left node))
+            (cons (bst-value node) (inorder (bst-right node))))))
 
 (define (make-bst elements)
     (define half (floor (/ (length elements) 2)))
@@ -136,15 +163,15 @@
 ;; ==== ABSTRACTION CURTAIN ====
 ;; You are provided bst-with, bst-without, bst-lookup, bst-min, bst-max, inorder, make-bst
 
-(define (identity x) x)
-(define tree (bst-with identity 7 (bst-with identity 6 (bst-with identity 5 (bst-with identity 4 (bst-with identity 3 (bst-with identity 2 (bst-with identity 1 nil))))))))
 
-(define (bst-union a b)
-    (make-bst (union-sorted (inorder a) (inorder b))))
+(define (bst-union key a b)
+    (make-bst (union-sorted key (inorder a) (inorder b))))
 
-(define (bst-intersection a b)
-    (make-bst (intersection-sorted (inorder a) (inorder b))))
+(define (bst-intersection key a b)
+    (make-bst (intersection-sorted key (inorder a) (inorder b))))
 
-(define a (fold (bst-with identity) nil [1 2 3 4 5 6 7 8]))
-(define b (fold (bst-with identity) nil [5 6 7 8 9 10 11 12]))
-(bst-intersection a b)
+;; (define (identity x) x)
+;; (define tree (bst-with identity 7 (bst-with identity 6 (bst-with identity 5 (bst-with identity 4 (bst-with identity 3 (bst-with identity 2 (bst-with identity 1 nil))))))))
+;; (define a (fold (bst-with identity) nil [1 2 3 4 5 6 7 7 8]))
+;; (define b (fold (bst-with identity) nil [5 6 7 8 8 9 10 11 12]))
+;; (bst-intersection (lambda (x) x) a b)

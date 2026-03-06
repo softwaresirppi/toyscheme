@@ -23,7 +23,9 @@
     (not (nil? (bst-lookup identity x set))))
 
 (define (set-cons x set)
-    (bst-with identity x set))
+    (if (nil? (bst-lookup identity x set))
+        (bst-with identity x set)
+        set))
 
 (define (set-car set)
     (bst-min set))

@@ -1,83 +1,183 @@
 (load LIST.TOY)
+(load BST.TOY)
 
-(define (huffman-node symbols weight left right)
+(define (huff-node symbols weight left right)
     [symbols weight left right])
 
-(define (symbols node) (car node))
-(define (weight node) (car (cdr node)))
-(define (left node) (car (cdr (cdr node))))
-(define (right node) (car (cdr (cdr (cdr node)))))
+(define (huff-symbols node) (car node))
+(define (huff-weight node) (car (cdr node)))
+(define (huff-left node) (car (cdr (cdr node))))
+(define (huff-right node) (car (cdr (cdr (cdr node)))))
 
 ;; ABSTRACTION CURTAIN
-(define (huffman-leaf symbol weight)
-    (huffman-node [symbol] weight nil nil))
+
+(define (huff-leaf symbol weight)
+    (huff-node [symbol] weight nil nil))
 
 (define (merge-node a b)
-    (huffman-node 
-        (append (symbols a) (symbols b))
-        (+ (weight a) (weight b))
+    (huff-node 
+        (append (huff-symbols a) (huff-symbols b))
+        (+ (huff-weight a) (huff-weight b))
         a b))
 
-(define (partition-by key things)
-    (define (partition things key left left-sum right right-sum)
-        (if (nil? things)
-            [(reverse left) (reverse right)]
-            (if (< left-sum right-sum)
-                (partition
-                    (cdr things) key
-                    (cons (car things) left) (+ (key (car things)) left-sum)
-                    right right-sum)
-                (partition
-                    (cdr things) key
-                    left left-sum
-                    (cons (car things) right) (+ (key (car things)) right-sum)))))
-    (partition things key [] 0 [] 0))
+(define (huff-tree nodes)
+    (define (huff-tree-by-bst node)
+        (if (= (bst-size node) 1)
+            (bst-min node)
+            (huff-tree-by-bst
+                (bst-with huff-weight
+                    (merge-node (bst-min node) (bst-min (bst-without-min node)))
+                    (bst-without-min (bst-without-min node))))))
+    (huff-tree-by-bst (make-bst (sort-by huff-weight nodes))))
 
+(define (huff-encode tree message)
+    (define (huff-encode-from tree symbol)
+        (cond
+            ((and (not (nil? (huff-left tree))) (contains? symbol (huff-symbols (huff-left tree))))
+                (cons 0 (huff-encode-from (huff-left tree) symbol)))
+            ((and (not (nil? (huff-right tree))) (contains? symbol (huff-symbols (huff-right tree))))
+                (cons 1 (huff-encode-from (huff-right tree) symbol)))
+            (true nil)))
+    (flat-map (huff-encode-from tree) message))
+
+(define (huff-decode full-tree code)
+    (define (huff-decode-from tree code)
+        (cond
+            ((and (nil? (huff-left tree)) (nil? (huff-right tree)))
+                (append (huff-symbols tree) (huff-decode-from full-tree code)))
+            ((and (not (nil? code)) (= (car code) 0)) (huff-decode-from (huff-left tree) (cdr code)))
+            ((and (not (nil? code)) (= (car code) 1)) (huff-decode-from (huff-right tree) (cdr code)))))
+    (huff-decode-from full-tree code))
+
+;; ABSTRACTION CURTAIN
+
+;; BRUTE FORCE WITH A LIST
+;; (define (huffman-tree nodes)
+;;     (define (huffman-tree-sorted nodes)
+;;         (if (= (length nodes) 1)
+;;             (car nodes)
+;;             (huffman-tree-sorted
+;;                 (union-sorted weight
+;;                     [(merge-node (car nodes) (car (cdr nodes)))]
+;;                     (cdr (cdr nodes))))))
+;;     (huffman-tree-sorted (reverse (sort-by weight nodes))))
+
+;; (define (partition-by key things)
+;;     (define (partition things key left left-sum right right-sum)
+;;         (if (nil? things)
+;;             [(reverse left) (reverse right)]
+;;             (if (< left-sum right-sum)
+;;                 (partition
+;;                     (cdr things) key
+;;                     (cons (car things) left) (+ (key (car things)) left-sum)
+;;                     right right-sum)
+;;                 (partition
+;;                     (cdr things) key
+;;                     left left-sum
+;;                     (cons (car things) right) (+ (key (car things)) right-sum)))))
+;;     (partition things key [] 0 [] 0))
+
+; THIS IS STOOPID
 ; I CRAVE PATTERN MATCHING.
 ; (huffman-tree nil) = nil
 ; (huffman-tree [x]) = x
 ; (huffman-tree things) = (merge-node (huffman-tree left) (huffman-tree right))
 ;   where left, right = (partition-by weight nodes)
-(define (huffman-tree nodes)
-    (define (huffman-tree-of-sorted nodes)
-        (define partitions (partition-by weight nodes))
-        (define left (car partitions))
-        (define right (car (cdr partitions)))
-        (cond
-            ((nil? nodes)
-                nodes)
-            ((= (length nodes) 1)
-                (car nodes))
-            (true (merge-node 
-                    (huffman-tree-of-sorted left)
-                    (huffman-tree-of-sorted right))) ))
-    (huffman-tree-of-sorted
-        (reverse (sort-by weight nodes))))
+;; (define (stoopid-huffman-tree nodes)
+;;     (define (huffman-tree-of-sorted nodes)
+;;         (define partitions (partition-by weight nodes))
+;;         (define left (car partitions))
+;;         (define right (car (cdr partitions)))
+;;         (cond
+;;             ((nil? nodes)
+;;                 nodes)
+;;             ((= (length nodes) 1)
+;;                 (car nodes))
+;;             (true (merge-node 
+;;                     (huffman-tree-of-sorted left)
+;;                     (huffman-tree-of-sorted right))) ))
+;;     (huffman-tree-of-sorted
+;;         (reverse (sort-by weight nodes))))
+(define alphabet-nodes [
+    (huff-leaf E 21912)	
+    (huff-leaf T 16587)	
+    (huff-leaf A 14810)	
+    (huff-leaf O 14003)	
+    (huff-leaf I 13318)	
+    (huff-leaf N 12666)	
+    (huff-leaf S 11450)	
+    (huff-leaf R 10977)	
+    (huff-leaf H 10795)	
+    (huff-leaf D 7874)	
+    (huff-leaf L 7253)	
+    (huff-leaf U 5246)	
+    (huff-leaf C 4943)	
+    (huff-leaf M 4761)	
+    (huff-leaf F 4200)	
+    (huff-leaf Y 3853)	
+    (huff-leaf W 3819)	
+    (huff-leaf G 3693)	
+    (huff-leaf P 3316)	
+    (huff-leaf B 2715)	
+    (huff-leaf V 2019)	
+    (huff-leaf K 1257)	
+    (huff-leaf X 315)	
+    (huff-leaf Q 205)	
+    (huff-leaf J 188)	
+    (huff-leaf Z 128)])
 
-(define (huffman-code tree symbol)
-    (cond
-        ((and (not (nil? (left tree))) (contains? symbol (symbols (left tree))))
-            (cons 0 (huffman-code (left tree) symbol)))
-        ((and (not (nil? (right tree))) (contains? symbol (symbols (right tree))))
-            (cons 1 (huffman-code (right tree) symbol)))
-        (true nil)))
+;; (define nodes [
+;;     (huff-leaf A 	2)
+;;     (huff-leaf NA 	16)
+;;     (huff-leaf BOOM 1)
+;;     (huff-leaf SHA 	3)
+;;     (huff-leaf GET 	2)
+;;     (huff-leaf YIP 	9)
+;;     (huff-leaf JOB 	2)
+;;     (huff-leaf WAH 	1)])
+;; (print (length (huff-encode (huff-tree nodes)
+;;     [GET A JOB
+;;     SHA NA NA NA NA NA NA NA NA
+;;     GET A JOB
+;;     SHA NA NA NA NA NA NA NA NA
+;;     WAH YIP YIP YIP YIP YIP YIP YIP YIP YIP
+;;     SHA BOOM])))
 
-;; ABSTRACTION CURTAIN
+(define nodes [
+    (huff-leaf A 	1) 11111
+    (huff-leaf B 	2) 11110
+    (huff-leaf C    4) 1110
+    (huff-leaf D 	8) 110
+    (huff-leaf E 	16) 10
+    (huff-leaf F 	32) 0])
 
-;; (define (huffman-tree nodes)
-;;     (if (= (length nodes) 1)
-;;         (car nodes)
-;;         (huffman-tree
-;;             (union-sorted weight
-;;                 [(merge-node (car nodes) (car (cdr nodes)))]
-;;                 (cdr (cdr nodes))))))
-
-(define tree
-    (huffman-tree
-        [(huffman-leaf A 1)
-        (huffman-leaf B 2)
-        (huffman-leaf C 3)
-        (huffman-leaf D 4)
-        (huffman-leaf E 5)]))
-
-(map (huffman-code tree) [A B C D E])
+(define alphabet-tree (huff-tree alphabet-nodes))
+(define alphabet-encode (huff-encode alphabet-tree))
+(define alphabet-decode (huff-decode alphabet-tree))
+(alphabet-decode [0 0 1 1 0 0 0 1 0 1 1 1])
+;; A = 1 1 1 0
+;; B = 1 0 1 1 0 0
+;; C = 0 1 0 0 0
+;; D = 1 1 1 1 1
+;; E = 0 1 1
+;; F = 0 0 1 1 0
+;; G = 1 1 1 1 0 0
+;; H = 0 1 0 1
+;; I = 1 1 0 0
+;; J = 0 0 1 0 1 1 0 0 1
+;; K = 0 0 1 0 1 1 1
+;; L = 1 0 1 1 1
+;; M = 0 0 1 1 1
+;; N = 1 0 1 0
+;; O = 1 1 0 1
+;; P = 1 0 1 1 0 1
+;; Q = 0 0 1 0 1 1 0 1 0
+;; R = 1 0 0 0
+;; S = 1 0 0 1
+;; T = 0 0 0
+;; U = 0 1 0 0 1
+;; V = 0 0 1 0 1 0
+;; W = 1 1 1 1 0 1
+;; X = 0 0 1 0 1 1 0 1 1
+;; Y = 0 0 1 0 0
+;; Z = 0 0 1 0 1 1 0 0 0

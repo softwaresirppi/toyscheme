@@ -1,4 +1,8 @@
 (load MATH.TOY)
+
+(define (atom? x)
+    (not (cons? x)))
+
 (define (nth n things)
     (if (zero? n)
         (car things)
