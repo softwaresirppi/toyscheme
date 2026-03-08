@@ -1,3 +1,8 @@
+;; TODO
+;; TESTING SYSTEM
+;; algebraic + boolean simplifier
+;; differentiate
+
 (load LIST.TOY)
 (load FUNCTIONS.TOY)
 
@@ -36,93 +41,140 @@
         (true (lookup-bindings key (cdr bindings)))))
 
 (define empty-bindings nil)
-;; ABSTRACTION CURTAIN
-
-(define (make-unknown x)
-    [(quote ?) x])
-
-(define (unknown? x)
-    (if (cons? x)
-        (= (car x) (quote ?))
-        false))
-
-(define (unknown-name x)
-    (car (cdr x)))
 
 ;; ABSTRACTION CURTAIN
 
-(define (deconstruct pattern value)
+(define (deconstruct pattern expression)
+    (define (unknown? x)
+        (if (cons? x)
+            (= (car x) (quote ?))
+            false))
+    (define (unknown-thing x)
+        (car (cdr x)))
+    (define (unknown-guard x)
+        (if (nil? (cdr (cdr x)))
+            nil
+            (car (cdr (cdr x)))))
     (cond 
-        ((and (nil? pattern) (nil? value))
+        ((and (nil? pattern) (nil? expression))
             empty-bindings)
-        ((or (nil? pattern) (nil? value))
+        ((or (nil? pattern) (nil? expression))
             FAILED)
         ((atom? pattern)
-            (if (= pattern value)
+            (if (= pattern expression)
                 empty-bindings
                 FAILED))
         ((unknown? pattern)
-            (with-binding (make-binding (unknown-name pattern) value) nil))
-        (true
-            (union-bindings
-                (deconstruct (car pattern) (car value))
-                (deconstruct (cdr pattern) (cdr value))))))
+            (if (or (nil? (unknown-guard pattern)) ((eval (unknown-guard pattern)) expression))
+                (with-binding (make-binding (unknown-thing pattern) expression) nil)
+                FAILED))
+        ((cons? pattern)
+            (if (cons? expression)
+                (union-bindings
+                    (deconstruct (car pattern) (car expression))
+                    (deconstruct (cdr pattern) (cdr expression)))
+                FAILED))))
 
-(define (construct pattern bindings)
+(define (evaluate bindings expression)
     (cond
-        ((nil? pattern)
-            pattern)
-        ((atom? pattern) 
-            pattern)
-        ((unknown? pattern) 
-            (lookup-bindings (unknown-name pattern) bindings))
-        (true 
-            (cons 
-                (construct (car pattern) bindings)
-                (construct (cdr pattern) bindings)))))
+        ((nil? expression)
+            expression)
+        ((number? expression)
+            expression)
+        ((symbol? expression)
+            (lookup-bindings expression bindings))
+        ((cons? expression)
+            (apply (eval (car expression))
+                (map (evaluate bindings) (cdr expression))))))
 
-;; types, guards
-;; ...
-;; actual lisp evaluation in pattern
-    ;; eval apply implementation
-    ;; define-macro
-(define (match-rule rule value)
-    (define (apply-rule rule value)
+(define (construct bindings skeleton)
+    (define (evaluate? x)
+        (if (cons? x)
+            (= (car x) (quote :))
+            false))
+    (define (evaluate-thing x)
+        (car (cdr x)))
+    (cond
+        ((nil? skeleton)
+            skeleton)
+        ((atom? skeleton) 
+            skeleton)
+        ((evaluate? skeleton) 
+            (evaluate bindings (evaluate-thing skeleton)))
+        (true
+            (cons 
+                (construct bindings (car skeleton))
+                (construct bindings (cdr skeleton))))))
+
+(define (match-rule rule expression)
+    (define (apply-rule rule expression)
         (define pattern (car rule))
         (define skeleton (car (cdr rule)))
-        (define binds (deconstruct pattern value))
+        (define binds (deconstruct pattern expression))
         (if (= binds FAILED)
-            value
-            (construct skeleton 
-                (deconstruct pattern value))))
-    (if (cons? value)
+            expression
+            (begin
+                (define constructed (construct binds skeleton))
+                (print CONSTRUCTION) (print constructed)
+                (newline)
+                constructed
+            )))
+    (if (cons? expression)
         (apply-rule rule
-                (cons (match-rule rule (car value))
-                    (match-rule rule (cdr value))))
-        (apply-rule rule value)))
+                (cons (match-rule rule (car expression))
+                    (match-rule rule (cdr expression))))
+        (apply-rule rule expression)))
 
-(define (match rules value)
+(define (match rules expression)
     (if (nil? rules)
-        value
-        (match (cdr rules) (match-rule (car rules) value))))
+        expression
+        (match (cdr rules) (match-rule (car rules) expression))))
 
-(define (recursive-match rules value)
-    (fixed-point (match rules) value))
-;; (match-rule (quote (B BANANA)) (quote (A B (C D))))
-(recursive-match
-    (quote
-        (
-            ;; ((* (? C) (+ (? A) (? B)))
-            ;;     (+ (* (? C) (? A)) (* (? C) (? B))))
-            ;; ((+ (? A) (? B))
-            ;;     SOME-SUM)
-            (1 ONE)
-            (2 TWO)
-            (3 THREE)
+(define (recursive-match rules expression) (fixed-point (match rules) expression))
+
+;; ABSTACTION CURTAIN
+
+(define simplify 
+    (recursive-match
+        '(   
+            ((* (? c) (+ (? a) (? b)))
+                (+ (* (: c) (: a)) (* (: c) (: b))))
+            
+            
+            ((+ (? x number?) (? y number?))
+                (: (+ x y)))
+            ((+ (? x (dot not number?)) (? c number?))
+                (+ (: c) (: x)))
+            ((+ 0 (? x))
+                (: x))
+
+            ((- (? x))
+                (* (: x) -1))
+            ((- (? x) (? y))
+                (* (: x) (- (: y))))
+            
+
+            ((* (? x number?) (? y number?))
+                (: (* x y)))
+            ((* (? x (dot not number?)) (? c number?))
+                (* (: c) (: x)))
+            ((* (? a number?) (* (? b number?) (? c)))
+                (* (: (* a b)) (: c)))
+            ((* 0 (? x))
+                0)
+            ((* 1 (? x))
+                (: x))
+
+            ((/ (? x))
+                (^ (: x) -1))
+            ((/ (? x) (? y))
+                (* (: x) (/ (: y))))
+            
+
         )
     )
-    (quote 
-        ((NIGGA 1) (NIGGA 2) (NIGGA 3))
-    )
-) ;; constructs to ((+ (* 2 1) (* 2 3)))
+)
 
+(simplify 
+    '(- (* (- 2) (+ x y)))
+)

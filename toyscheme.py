@@ -198,6 +198,11 @@ class Scheme:
                         ignored(character(']')))),
                     flat(sequence(
                         tag('quote'),
+                        ignored(character('{')),
+                        zeroOrMany(sexp),
+                        ignored(character('}')))),
+                    flat(sequence(
+                        tag('quote'),
                         ignored(character('\'')),
                         sequence(sexp))),
                     flat(sequence(
@@ -207,7 +212,7 @@ class Scheme:
                     number,
                     symbol))(text)
         return thing_of(complete(zeroOrMany(sexp)))(text)
-    
+
     @staticmethod
     def preserve_last_expression(evaluator):
         def preserved_evaluator(interpreter, locals, ast, topLevel=False):
@@ -291,13 +296,16 @@ class Scheme:
                     if actual_arg != schemeFalse:
                         return actual_arg
                 return schemeFalse
-            case ['quote', x]:
+            case ['quote', *x]:
                 def quote(ast):
                     match ast:
                         case []: return schemeNil
                         case [first, *rest]: return SchemeCons(quote(first), quote(rest))
                         case something: return something
-                return quote(x)
+                if len(x) == 1:
+                    return quote(x[0])
+                else:
+                    return quote(x)
             case ['list', *xs]:
                 def consify(xs):
                     match xs:
@@ -330,6 +338,13 @@ class Scheme:
                 evaluated_value = interpreter.evaluate(locals, value)
                 (interpreter.globals if topLevel else locals)[name] = evaluated_value
                 return evaluated_value
+            case ['eval', code]:
+                def listify(xs):
+                    match xs:
+                        case SchemeNil(): return []
+                        case SchemeCons(): return [xs.car] + listify(xs.cdr)
+                        case something: return something
+                return interpreter.evaluate(locals, listify(interpreter.evaluate(locals, code)))
             case [fn, *args]:
                 actual_fn = interpreter.evaluate(locals, fn)
                 actual_args = [interpreter.evaluate(locals, arg) for arg in args]
@@ -347,7 +362,7 @@ class Scheme:
                 lambda x: ['begin', *x],
                 partial(interpreter.evaluate, {}, topLevel=True))
         except Exception as e:
-            # raise e
+            raise e
             print(f"\033[31m{e}\033[0m")
             return schemeNil
 
@@ -358,4 +373,5 @@ class Scheme:
         interpreter.repl()
 
 if __name__ == '__main__':
+    print(Scheme(0, False).evaluate({}, ['+', SchemeNumber(1), SchemeNumber(2)]))
     Scheme.main(argv[1:])

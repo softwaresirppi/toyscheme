@@ -21,3 +21,8 @@
     (newline)
     result
 )
+
+(define (apply f args)
+    (if (nil? args)
+        f
+        (apply (f (car args)) (cdr args))))
